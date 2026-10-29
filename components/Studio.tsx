@@ -25,7 +25,7 @@ export default function Studio() {
   const [selected, setSelected] = useState<string | null>(null);
   const [linksText, setLinksText] = useState("");
   const [query, setQuery] = useState("");
-  const [qType, setQType] = useState<SearchType>("track");
+  const [qType, setQType] = useState<SearchType>("album");
   const [results, setResults] = useState<MusicItem[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -438,22 +438,9 @@ export default function Studio() {
         </div>
         <div className="space-y-4 overflow-y-auto p-4">
           <section>
-            <label className="label">Links de Spotify (uno por línea)</label>
-            <textarea
-              className="field h-24 resize-y font-mono text-xs"
-              placeholder={"https://open.spotify.com/album/...\nhttps://open.spotify.com/track/...\nhttps://spotify.link/..."}
-              value={linksText}
-              onChange={(e) => setLinksText(e.target.value)}
-            />
-            <button className="btn-dark mt-2 w-full" disabled={!!busy} onClick={addLinks}>
-              Agregar al lote
-            </button>
-          </section>
-
-          <section>
-            <label className="label">Buscar</label>
+            <label className="label">Buscar en Spotify</label>
             <div className="mb-2 flex gap-1">
-              {(Object.keys(KIND_LABEL) as SearchType[]).map((k) => (
+              {(["album", "track", "playlist"] as SearchType[]).map((k) => (
                 <button key={k} className="seg flex-1" data-on={qType === k} onClick={() => setQType(k)}>
                   {KIND_LABEL[k]}
                 </button>
@@ -466,7 +453,7 @@ export default function Studio() {
                 doSearch();
               }}
             >
-              <input className="field" placeholder="Nombre o artista" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input className="field" placeholder="Álbum, canción o artista" value={query} onChange={(e) => setQuery(e.target.value)} />
               <button className="btn" disabled={!!busy}>
                 Buscar
               </button>
@@ -487,6 +474,19 @@ export default function Studio() {
                 ))}
               </ul>
             )}
+          </section>
+
+          <section>
+            <label className="label">O pega links (uno por línea)</label>
+            <textarea
+              className="field h-24 resize-y font-mono text-xs"
+              placeholder={"https://open.spotify.com/album/...\nhttps://open.spotify.com/track/...\nhttps://spotify.link/..."}
+              value={linksText}
+              onChange={(e) => setLinksText(e.target.value)}
+            />
+            <button className="btn-dark mt-2 w-full" disabled={!!busy} onClick={addLinks}>
+              Agregar al lote
+            </button>
           </section>
 
           <section>

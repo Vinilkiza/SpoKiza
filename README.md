@@ -9,16 +9,18 @@ Editor para crear **posters de álbum, posters de canción, polaroids y placas t
 ## Instalar y abrir (en el PC)
 
 1. **Node.js**: descarga la versión **LTS** de https://nodejs.org e instálala (siguiente, siguiente, finalizar).
-2. **Descargar SpoKiza**: en GitHub (repositorio Vinilkiza/SpoKiza) botón verde **Code → Download ZIP**, y descomprímelo donde quieras.
-3. Doble clic en **`iniciar.bat`**. La primera vez tarda unos minutos preparándose; después abre SpoKiza en el navegador.
-   La ventana negra se deja abierta mientras se usa el programa.
-4. **Conectar Spotify (solo la primera vez)**: el programa muestra una pantalla con los pasos. Se crea un registro gratis en
-   developer.spotify.com (con una cuenta de Spotify **Premium**, Spotify lo exige) y se pegan ahí el Client ID y el Client Secret.
-   El programa los prueba y los guarda solo.
+2. **Descargar SpoKiza**: en GitHub (repositorio Vinilkiza/SpoKiza) botón verde **Code → Download ZIP**, y descomprímelo.
+3. Doble clic en **`SpoKiza.vbs`**. La primera vez se prepara (unos minutos) y crea el icono **SpoKiza** en el escritorio.
+   Desde ahí se abre siempre con ese icono, en su propia ventana, sin ventana negra.
+4. **Conectar Spotify (solo la primera vez)**: el programa muestra una pantalla con los pasos para sacar el Client ID y el
+   Client Secret en developer.spotify.com (cuenta **Premium**) y los guarda solo.
+
+`iniciar.bat` sigue funcionando como alternativa (abre con la ventana negra visible, útil para ver errores).
+El programa queda encendido en segundo plano hasta que se apaga o reinicia el PC; al volver a abrir el icono, abre al instante.
 
 ## Cómo se usa
 
-1. **Agregar:** pega links de Spotify (uno por línea: canciones, álbumes, playlists o links cortos `spotify.link`) y clic en *Agregar al lote*, o usa el buscador.
+1. **Agregar:** busca el álbum, canción o playlist en *Buscar en Spotify* (no hace falta abrir Spotify) y dale *+ Lote*. También se pueden pegar links, uno por línea.
 2. **Producto y medida:** elige Poster de álbum, Poster de canción, Polaroid o Placa. La medida es libre: escribe cualquier ancho y alto en cm o px (o usa una de la lista); botón ⇄ para girar. En horizontal el póster de álbum se acomoda solo (portada a la izquierda, ficha a la derecha). El sangrado viene en 3 mm (posters) y 2 mm (polaroid/placa). En tamaños gigantes el programa baja la resolución lo justo para que el archivo se pueda generar y lo avisa arriba.
 3. **Estilo de póster de álbum** (inspirados en referencias de Pinterest):
    - *Titular*: artista arriba, portada, canciones a la izquierda, paleta y ficha a la derecha, título gigante abajo.
