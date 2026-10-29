@@ -8,9 +8,9 @@ dir = fso.GetParentFolderName(WScript.ScriptFullName)
 sh.CurrentDirectory = dir
 url = "http://localhost:3000"
 
-' Icono en el escritorio
+' Icono en el escritorio (se rehace siempre para que apunte a esta carpeta)
 lnkPath = sh.SpecialFolders("Desktop") & "\SpoKiza.lnk"
-If Not fso.FileExists(lnkPath) Then
+If True Then
   Set lnk = sh.CreateShortcut(lnkPath)
   lnk.TargetPath = "wscript.exe"
   lnk.Arguments = """" & WScript.ScriptFullName & """"
