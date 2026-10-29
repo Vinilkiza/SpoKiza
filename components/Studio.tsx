@@ -72,6 +72,37 @@ export default function Studio() {
   const product = productById(settings.product);
 
   const say = (kind: "ok" | "error", text: string) => setNotice({ kind, text });
+
+  /* ---------- conexión con Spotify (pantalla de configuración) ---------- */
+  const [setup, setSetup] = useState({ open: false, configured: true, canSave: true });
+  const [keys, setKeys] = useState({ id: "", secret: "", error: "", saving: false });
+  useEffect(() => {
+    fetch("/api/setup")
+      .then((r) => r.json())
+      .then((d: { configured: boolean; canSave: boolean }) => setSetup({ open: !d.configured, ...d }))
+      .catch(() => null);
+  }, []);
+  const saveKeys = async () => {
+    setKeys((k) => ({ ...k, saving: true, error: "" }));
+    const res = await fetch("/api/setup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId: keys.id, clientSecret: keys.secret }),
+    }).catch(() => null);
+    const data = res ? ((await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }) : { error: "No se pudo guardar" };
+    if (data.ok) {
+      setKeys({ id: "", secret: "", error: "", saving: false });
+      setSetup((s) => ({ ...s, open: false, configured: true }));
+      say("ok", "Spotify conectado. Ya puedes pegar links.");
+    } else setKeys((k) => ({ ...k, saving: false, error: data.error ?? "No se pudo guardar" }));
+  };
+  const needsSetup = (status: number) => {
+    if (status === 412) {
+      setSetup((s) => ({ ...s, open: true, configured: false }));
+      return true;
+    }
+    return false;
+  };
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(null), notice.kind === "error" ? 9000 : 4000);
@@ -107,6 +138,7 @@ export default function Studio() {
         body: JSON.stringify({ inputs }),
       });
       const data = (await res.json()) as { results?: { input: string; item?: MusicItem; error?: string }[]; error?: string };
+      if (needsSetup(res.status)) return;
       if (!res.ok || !data.results) throw new Error(data.error ?? "No se pudo consultar Spotify");
       const ok = data.results.filter((r) => r.item).map((r) => r.item!);
       const bad = data.results.filter((r) => r.error);
@@ -121,6 +153,7 @@ export default function Studio() {
       if (!query.trim()) return;
       const res = await fetch(`/api/spotify?q=${encodeURIComponent(query)}&type=${qType}`);
       const data = (await res.json()) as { items?: MusicItem[]; error?: string };
+      if (needsSetup(res.status)) return;
       if (!res.ok) throw new Error(data.error ?? "Error en la búsqueda");
       setResults(data.items ?? []);
       if (!data.items?.length) say("error", "Sin resultados");
@@ -397,6 +430,11 @@ export default function Studio() {
         <div className="border-b border-line px-4 py-3">
           <h1 className="text-base font-extrabold tracking-tight">SpoKiza</h1>
           <p className="text-xs text-soft">Posters, polaroids y placas desde Spotify</p>
+          {setup.canSave && (
+            <button className="mt-1 text-xs text-soft underline hover:text-ink" onClick={() => setSetup((s) => ({ ...s, open: true }))}>
+              {setup.configured ? "Spotify conectado · cambiar claves" : "Conectar Spotify"}
+            </button>
+          )}
         </div>
         <div className="space-y-4 overflow-y-auto p-4">
           <section>
@@ -778,6 +816,54 @@ export default function Studio() {
           </div>
         </section>
       </aside>
+
+      {setup.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-card p-6 shadow-2xl">
+            <h2 className="text-lg font-extrabold">Conectar Spotify (solo una vez)</h2>
+            <p className="mt-1 text-sm text-soft">
+              Spotify pide dos claves para dejar que el programa lea álbumes y canciones. No se instala nada: es un registro en su página.
+            </p>
+            <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm">
+              <li>
+                Abre{" "}
+                <a className="font-semibold underline" href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">
+                  developer.spotify.com/dashboard
+                </a>{" "}
+                e inicia sesión con tu cuenta de Spotify (tiene que ser Premium).
+              </li>
+              <li>
+                Dale <b>Create app</b>. Nombre: <code>SpoKiza</code> · Descripción: <code>Editor</code> · Redirect URI:{" "}
+                <code>http://127.0.0.1:3000/callback</code> (dale <b>Add</b>) · marca <b>Web API</b> · acepta y <b>Save</b>.
+              </li>
+              <li>
+                Entra a <b>Settings</b>, copia el <b>Client ID</b> y, con <b>View client secret</b>, el <b>Client Secret</b>. Pégalos aquí:
+              </li>
+            </ol>
+            <div className="mt-4 space-y-2">
+              <input className="field font-mono" placeholder="Client ID" value={keys.id} onChange={(e) => setKeys((k) => ({ ...k, id: e.target.value }))} />
+              <input
+                className="field font-mono"
+                placeholder="Client Secret"
+                type="password"
+                value={keys.secret}
+                onChange={(e) => setKeys((k) => ({ ...k, secret: e.target.value }))}
+              />
+              {keys.error && <p className="text-sm text-accent">{keys.error}</p>}
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              {setup.configured && (
+                <button className="btn" onClick={() => setSetup((s) => ({ ...s, open: false }))}>
+                  Cerrar
+                </button>
+              )}
+              <button className="btn-dark" disabled={keys.saving || !keys.id || !keys.secret} onClick={saveKeys}>
+                {keys.saving ? "Probando…" : "Guardar y probar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

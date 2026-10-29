@@ -14,14 +14,32 @@ export class SpotifyError extends Error {
   }
 }
 
+/** Prueba un par de claves contra Spotify (lo usa la pantalla de configuración). */
+export async function testCredentials(id: string, secret: string): Promise<{ ok: boolean; status: number }> {
+  const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      Authorization: "Basic " + Buffer.from(`${id}:${secret}`).toString("base64"),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+    cache: "no-store",
+  });
+  return { ok: res.ok, status: res.status };
+}
+
+export function resetToken() {
+  cached = null;
+}
+
 async function getToken(): Promise<string> {
   if (cached && Date.now() < cached.expiresAt - 60_000) return cached.token;
   const id = process.env.SPOTIFY_CLIENT_ID;
   const secret = process.env.SPOTIFY_CLIENT_SECRET;
   if (!id || !secret) {
     throw new SpotifyError(
-      "Faltan SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET en el archivo .env.local (ver README).",
-      500,
+      "Falta conectar Spotify: pega el Client ID y el Client Secret en la pantalla de configuración.",
+      412,
     );
   }
   const res = await fetch("https://accounts.spotify.com/api/token", {
