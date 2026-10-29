@@ -318,8 +318,12 @@ function titular(k: Kit, f: Frame) {
     k.info.label && `${k.L.label}: ${k.info.label}`,
     k.info.length && `${k.L.length}: ${k.info.length}`,
   ].filter(Boolean) as string[];
+  // La ficha nunca invade la columna de canciones: se achica para caber en su columna
   lines.forEach((l) => {
-    capText(ctx, UP(l), R, ry, cap, { family: F.body, weight: bw, color: k.fg, align: "right", maxW: c * 0.48 });
+    const text = UP(l);
+    const w = widthAtCap(ctx, text, cap, F.body, bw);
+    const fitCap = w > rightW ? Math.max(cap * 0.72, (cap * rightW) / w) : cap;
+    capText(ctx, text, R, ry + (cap - fitCap), fitCap, { family: F.body, weight: bw, color: k.fg, align: "right", maxW: rightW });
     ry += cap * 2.05;
   });
   const titleRoom = bottom - ry - 3 * u;

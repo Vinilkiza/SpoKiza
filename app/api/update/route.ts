@@ -6,12 +6,12 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /* Busca actualizaciones en GitHub cada vez que se abre o se recarga (F5) SpoKiza.
-   Como mucho una vez cada 5 minutos. Solo en el PC (no en Vercel). */
+   Como mucho una vez cada 30 segundos. Solo en el PC (no en Vercel). */
 let last = 0;
 
 export async function POST() {
   if (process.env.VERCEL) return NextResponse.json({ updated: false });
-  if (Date.now() - last < 5 * 60_000) return NextResponse.json({ updated: false });
+  if (Date.now() - last < 30_000) return NextResponse.json({ updated: false });
   last = Date.now();
   const script = path.join(process.cwd(), "scripts", "update.mjs");
   const output = await new Promise<string>((resolve) =>

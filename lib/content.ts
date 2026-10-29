@@ -3,6 +3,23 @@ import { formatDuration } from "./parse";
 
 const year = (d?: string) => (d ? d.slice(0, 4) : "");
 
+/** "La Tortura (feat. Alejandro Sanz)" -> "La Tortura" */
+export function cleanTrack(name: string): string {
+  return name
+    .replace(/\s*[([](?:feat\.?|ft\.?|with|con)\s[^)\]]*[)\]]/gi, "")
+    .replace(/\s+-\s+(?:\d{4}\s+)?remaster(?:ed|izado)?(?:\s+\d{4})?$/i, "")
+    .trim();
+}
+
+/** "Fijación Oral Volumen 1 (Expanded Edition)" -> "Fijación Oral Volumen 1" */
+export function cleanAlbum(name: string): string {
+  const cleaned = name
+    .replace(/\s*[([][^)\]]*(?:edition|edición|deluxe|remaster|expanded|bonus|version|versión|anniversary|aniversario)[^)\]]*[)\]]/gi, "")
+    .replace(/\s+-\s+[^-]*(?:edition|edición|deluxe|remaster)[^-]*$/i, "")
+    .trim();
+  return cleaned || name;
+}
+
 /** Textos iniciales del diseño a partir de los datos de Spotify (todo se puede editar). */
 export function makeContent(item: MusicItem): DesignContent {
   const n = item.totalTracks ?? item.tracks?.length ?? 0;
@@ -13,11 +30,11 @@ export function makeContent(item: MusicItem): DesignContent {
   if (item.kind === "playlist") subtitle = [n ? `${n} canciones` : "", dur].filter(Boolean).join(" · ");
   const totalMs = item.kind === "track" ? item.durationMs ?? 210_000 : item.tracks?.[0]?.durationMs ?? 210_000;
   return {
-    title: item.title,
+    title: item.kind === "album" ? cleanAlbum(item.title) : cleanTrack(item.title),
     artists: item.artists,
     subtitle,
     dedication: "",
-    tracklist: (item.tracks ?? []).map((t) => t.name).join("\n"),
+    tracklist: (item.tracks ?? []).map((t) => cleanTrack(t.name)).join("\n"),
     elapsed: formatDuration(totalMs * 0.38),
     duration: formatDuration(totalMs),
     genre: (item.genres ?? []).map((g) => g.replace(/(^|\s|-)\p{L}/gu, (x) => x.toLocaleUpperCase("es"))).join(" / "),
