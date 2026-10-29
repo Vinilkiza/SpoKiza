@@ -29,7 +29,7 @@ function texts(k: Kit, w: number, u: number, titleCap: number, artistCap: number
   const title = fitLines(ctx, k.o.content.title || " ", F.title, F.titleWeight, w, titleCap, titleCap * 2.4, 2);
   const aCap = Math.max(artistCap, MIN_SMALL_MM * k.mm);
   const artist = fitLines(ctx, k.o.content.artists || " ", F.body, artistWeight, w, aCap, aCap * 2.4, 2);
-  const gap = 1.6 * u;
+  const gap = Math.max(2.4 * u, title.cap * 0.32);
   return { title, artist, gap, height: title.height + (k.o.content.artists ? gap + artist.height : 0) };
 }
 
@@ -126,7 +126,8 @@ function polaroid(k: Kit, f: Frame) {
   const pm = playerMetrics(k, u * 1.1);
   const ded = dedicationFit(k, pw * 0.92, 3 * u);
   const rowH = Math.max(t.height, ch);
-  const lower = 4.5 * u + rowH + (showPlayer ? 3.5 * u + pm.height : 0) + (ded ? 3 * u + ded.height : 0) + 5 * u;
+  const bottomPad = 9 * u; // la polaroid lleva el borde de abajo más ancho
+  const lower = 4.5 * u + rowH + (showPlayer ? 3.5 * u + pm.height : 0) + (ded ? 3.5 * u + ded.height : 0) + bottomPad;
   // Foto cuadrada si cabe; si no, se recorta en alto para que todo lo de abajo quepa
   const ph = Math.max(pw * 0.55, Math.min(pw, f.th - side - lower));
   madeBy(k, X + pw, side);
@@ -145,7 +146,7 @@ function polaroid(k: Kit, f: Frame) {
     movable(k, "player", () => player(k, X, py, pw, u * 1.1));
     y += pm.height;
   }
-  if (ded) drawDedication(k, ded, X + pw / 2, y + 3 * u);
+  if (ded) drawDedication(k, ded, X + pw / 2, y + 3.5 * u);
 }
 
 /* ---------------- Placa tipo Spotify ---------------- */
