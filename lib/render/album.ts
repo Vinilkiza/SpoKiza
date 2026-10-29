@@ -56,8 +56,9 @@ function titular(k: Kit, f: Frame, scale: number) {
   const bw = F.bodyWeight;
   const R = X + c;
 
-  madeBy(k, R, m);
   const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, c * 0.62, 7.4 * u, 7.4 * u * 1.6, 2);
+  // En Titular la firma va a la derecha, a la altura del nombre del artista
+  madeBy(k, R, m, false, top + artist.cap / 2);
   movable(k, "artist", () => drawFitted(ctx, artist, X, top, { ...tf, color: k.fg }));
   let y = top + Math.max(artist.height, 5 * u) + 3.4 * u;
   cover(k, X + (c - cs) / 2, y, cs, cs);
@@ -341,7 +342,7 @@ function degradado(k: Kit, f: Frame, o: RenderOpts, scale: number) {
   const artist = fitLines(ctx, o.content.artists || " ", F.body, 400, textW, aCap, aCap * 2.4, 2);
   const blockH = title.height + 2.2 * u + artist.height;
   const palY = infoTop + Math.max(0, (blockH - sw) / 2);
-  if (showPal) movable(k, "palette", () => swatches(k, 5, R, palY, sw, gap, 0.3 * u));
+  if (showPal) movable(k, "palette", () => swatches(k, 5, R, palY, sw, gap));
   movable(k, "title", () => drawFitted(ctx, title, X, infoTop, { family: F.title, weight: F.titleWeight, color: k.fg }));
   let y = infoTop + title.height + 2.2 * u;
   const ay = y;

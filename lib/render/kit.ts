@@ -345,6 +345,15 @@ export function swatches(k: Kit, n: number, xRight: number, y: number, size: num
       const x = start + i * (size + gap);
       k.ctx.fillStyle = c;
       k.ctx.fillRect(x, y, size, size);
+      // Si el cuadro es casi del mismo color del fondo, se le pone un filo suave (no negro) para que se vea
+      const [r1, g1, b1] = hexToRgb(c);
+      const [r2, g2, b2] = hexToRgb(k.bg);
+      if (!border && Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2) < 60) {
+        const lw = Math.max(1, size * 0.04);
+        k.ctx.strokeStyle = mix(k.fg, k.bg, 0.55);
+        k.ctx.lineWidth = lw;
+        k.ctx.strokeRect(x + lw / 2, y + lw / 2, size - lw, size - lw);
+      }
       if (border) {
         k.ctx.strokeStyle = k.fg;
         k.ctx.lineWidth = border;
@@ -364,10 +373,11 @@ export function rule(k: Kit, x: number, y: number, w: number, t: number, color =
 }
 
 /** Firma "Made By Vinilkiza" (Montserrat Black), arriba a la derecha dentro del margen. */
-export function madeBy(k: Kit, right: number, marginTop: number, onImage = false) {
+export function madeBy(k: Kit, right: number, marginTop: number, onImage = false, centerY?: number) {
   if (!k.o.settings.showMadeBy) return;
   const cap = Math.max(MIN_SMALL_MM * 1.4 * k.mm, k.f.tw * 0.0072);
-  const y = k.f.y0 + Math.max(cap * 0.6, (marginTop - cap) / 2);
+  // Por defecto centrado en el margen de arriba; si se da centerY, alineado con esa línea (ej. el nombre del artista)
+  const y = centerY !== undefined ? centerY - cap / 2 : k.f.y0 + Math.max(cap * 0.6, (marginTop - cap) / 2);
   movable(k, "madeby", () =>
     capText(k.ctx, "Made By Vinilkiza", right, y, cap, {
       family: "'Montserrat'",
