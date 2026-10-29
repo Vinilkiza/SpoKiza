@@ -6,7 +6,7 @@ import type { RenderOpts } from "./templates";
 import { FONTS, type FontDef } from "./products";
 import { albumInfo, LABELS, type AlbumInfo } from "../content";
 import { type Ctx, drawCover, drawPlaceholder, ellipsize, setFont, wrapLines } from "./draw";
-import { hexToRgb, mix } from "./color";
+import { hexToRgb, luminance, mix } from "./color";
 
 interface Frame {
   x0: number;
@@ -233,6 +233,20 @@ function tracklist(k: Kit, box: Box, st: ListStyle) {
   });
 }
 
+/** Siempre 5 colores, ordenados de oscuro a claro (si la portada tiene menos, se completan con mezclas). */
+function fivePalette(p: string[]): string[] {
+  if (!p.length) return [];
+  const out = [...p.slice(0, 5)];
+  let i = 0;
+  while (out.length < 5) {
+    const a = out[i % out.length];
+    const b = out[(i + 1) % out.length];
+    out.push(a === b ? mix(a, i % 2 ? "#000000" : "#ffffff", 0.35) : mix(a, b, 0.5));
+    i++;
+  }
+  return out.sort((x, y) => luminance(x) - luminance(y));
+}
+
 /* ---------------- entrada ---------------- */
 
 const STYLE_TEXT: Record<AlbumStyle, { upper: boolean; num: ListStyle["num"]; bold: boolean }> = {
@@ -255,7 +269,7 @@ export function renderAlbum(ctx: Ctx, f: Frame, o: RenderOpts) {
     fg: colors.fg,
     bg: colors.bg,
     muted: colors.muted,
-    palette,
+    palette: fivePalette(palette),
   };
   const style = o.settings.albumStyle;
   if (f.tw / f.th > 1.08) return landscape(k, f, o, style);
@@ -513,17 +527,21 @@ function degradado(k: Kit, f: Frame, o: RenderOpts) {
   const infoTop = Math.min(f.y0 + f.th * 0.63, bottom - 50 * u);
   bleedImage(k, { x: 0, y: 0, w: o.W, h: infoTop + 8 * u }, infoTop - f.th * 0.2, infoTop + 1 * u, "down");
 
-  const sw = 7 * u;
-  const gap = 1.8 * u;
-  const n = o.settings.showPalette ? Math.min(3, k.palette.length) : 0;
-  const palW = n ? n * sw + (n - 1) * gap : 0;
-  swatches(k, 3, R, infoTop, sw, gap, 0.45 * u);
-  const title = fitLines(ctx, o.content.title || " ", F.title, F.titleWeight, c - palW - 4 * u, 4.4 * u, 4.4 * u * 1.7, 2);
+  // Paleta: 5 cuadros iguales alineados con la columna derecha y centrados con el título
+  const showPal = o.settings.showPalette && k.palette.length > 0;
+  const rw = c * 0.36;
+  const gap = 1.1 * u;
+  const sw = (rw - 4 * gap) / 5;
+  const textW = c - (showPal ? rw + 5 * u : 0);
+  const title = fitLines(ctx, o.content.title || " ", F.title, F.titleWeight, textW, 4.4 * u, 4.4 * u * 1.7, 2);
+  const aCap = 2.4 * u;
+  const blockH = title.height + 2.2 * u + aCap;
+  const palY = infoTop + Math.max(0, (blockH - sw) / 2);
+  if (showPal) swatches(k, 5, R, palY, sw, gap, 0.3 * u);
   drawFitted(ctx, title, X, infoTop, { family: F.title, weight: F.titleWeight, color: k.fg });
   let y = infoTop + title.height + 2.2 * u;
-  const aCap = 2.4 * u;
-  capText(ctx, o.content.artists, X, y, aCap, { family: F.body, weight: 400, color: k.fg, maxW: c - palW - 4 * u });
-  y = Math.max(y + aCap, infoTop + (n ? sw : 0)) + 3.6 * u;
+  capText(ctx, o.content.artists, X, y, aCap, { family: F.body, weight: 400, color: k.fg, maxW: textW });
+  y = Math.max(y + aCap, showPal ? palY + sw : 0) + 3.6 * u;
   rule(k, X, y, c, 0.5 * u);
   y += 4.2 * u;
 

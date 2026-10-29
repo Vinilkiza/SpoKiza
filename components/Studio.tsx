@@ -73,6 +73,19 @@ export default function Studio() {
 
   const say = (kind: "ok" | "error", text: string) => setNotice({ kind, text });
 
+  /* ---------- actualizaciones automáticas (al abrir o con F5) ---------- */
+  useEffect(() => {
+    fetch("/api/update", { method: "POST" })
+      .then((r) => r.json())
+      .then((d: { updated?: boolean }) => {
+        if (d.updated) {
+          setNotice({ kind: "ok", text: "SpoKiza se actualizó. Recargando…" });
+          setTimeout(() => window.location.reload(), 3000);
+        }
+      })
+      .catch(() => null);
+  }, []);
+
   /* ---------- conexión con Spotify (pantalla de configuración) ---------- */
   const [setup, setSetup] = useState({ open: false, configured: true, canSave: true });
   const [keys, setKeys] = useState({ id: "", secret: "", error: "", saving: false });
