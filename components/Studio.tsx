@@ -10,6 +10,9 @@ import { buildPdf, buildSheetPdf, SHEETS, type PdfPiece } from "@/lib/export/pdf
 import { renderMockup } from "@/lib/export/mockup";
 import { recordVideo } from "@/lib/export/video";
 import { formatRelease, makeEntry } from "@/lib/content";
+import type { EditBox } from "@/lib/render/kit";
+import { EDIT_LABELS } from "@/lib/render/kit";
+import EditLayer, { type CssBox } from "./EditLayer";
 import { formatDuration } from "@/lib/parse";
 
 /** Límite de píxeles por archivo para que el navegador no se quede sin memoria. */
@@ -245,6 +248,9 @@ export default function Studio() {
   const previewRef = useRef<HTMLCanvasElement>(null);
   const [box, setBox] = useState({ w: 600, h: 700 });
   const [preview, setPreview] = useState({ cssW: 0, cssH: 0, bleedCss: 0 });
+  const [editMode, setEditMode] = useState(false);
+  const [editBoxes, setEditBoxes] = useState<CssBox[]>([]);
+  const [selectedEl, setSelectedEl] = useState<string | null>(null);
 
   useEffect(() => {
     const el = boxRef.current;
@@ -265,14 +271,50 @@ export default function Studio() {
       const totalW = settings.widthCm * 10 + 2 * settings.bleedMm;
       const totalH = settings.heightCm * 10 + 2 * settings.bleedMm;
       const pxPerMm = Math.min((box.w - 32) / totalW, (box.h - 32) / totalH) * dpr;
-      const c = renderCanvas(entry, settings, assets, pxPerMm, previewRef.current);
+      const boxes: EditBox[] = [];
+      const c = renderCanvas(entry, settings, assets, pxPerMm, previewRef.current, editMode ? boxes : undefined);
       setPreview({ cssW: c.width / dpr, cssH: c.height / dpr, bleedCss: (settings.bleedMm * pxPerMm) / dpr });
-    }, 120);
+      setEditBoxes(boxes.map((b) => ({ id: b.id, x: b.x / dpr, y: b.y / dpr, w: b.w / dpr, h: b.h / dpr })));
+    }, 60);
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [entry, settings, box]);
+  }, [entry, settings, box, editMode]);
+
+  /* ---------- modo edición: mover y escalar elementos ---------- */
+  const layoutOf = (id: string) => entry?.content.layout?.[id] ?? { dx: 0, dy: 0, s: 1 };
+  const setLayout = (id: string, patch: Partial<{ dx: number; dy: number; s: number }>) => {
+    if (!entry) return;
+    const next = { ...(entry.content.layout ?? {}), [id]: { ...layoutOf(id), ...patch } };
+    patchContent({ layout: next });
+  };
+  const resetLayout = (id?: string) => {
+    if (!entry) return;
+    if (!id) return patchContent({ layout: {} });
+    const next = { ...(entry.content.layout ?? {}) };
+    delete next[id];
+    patchContent({ layout: next });
+  };
+  const trimCss = { w: preview.cssW - 2 * preview.bleedCss, h: preview.cssH - 2 * preview.bleedCss };
+  useEffect(() => {
+    if (!editMode || !selectedEl) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const step = e.shiftKey ? 0.01 : 0.002;
+      const l = layoutOf(selectedEl);
+      if (e.key === "ArrowLeft") setLayout(selectedEl, { dx: l.dx - step });
+      else if (e.key === "ArrowRight") setLayout(selectedEl, { dx: l.dx + step });
+      else if (e.key === "ArrowUp") setLayout(selectedEl, { dy: l.dy - step });
+      else if (e.key === "ArrowDown") setLayout(selectedEl, { dy: l.dy + step });
+      else if (e.key === "Escape") setSelectedEl(null);
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   /* ---------- exportaciones ---------- */
   const fileBase = (e: BatchEntry) => `${safeName(`${e.content.title}-${e.content.artists}`)}-${settings.product}`;
@@ -576,11 +618,51 @@ export default function Studio() {
             {product.label} · {fmt(settings.widthCm)} × {fmt(settings.heightCm)} cm · {pxW} × {pxH} px a {exportDpi} DPI{exportDpi < settings.dpi ? " (ajustado por tamaño)" : ""} · sangrado{" "}
             {settings.bleedMm} mm
           </span>
-          <label className="flex items-center gap-1.5">
-            <input type="checkbox" checked={showTrim} onChange={(e) => setShowTrim(e.target.checked)} />
-            Línea de corte
-          </label>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={showTrim} onChange={(e) => setShowTrim(e.target.checked)} />
+              Línea de corte
+            </label>
+            <button
+              className={editMode ? "btn-dark px-2.5 py-1 text-xs" : "btn px-2.5 py-1 text-xs"}
+              disabled={!entry}
+              onClick={() => {
+                setEditMode((v) => !v);
+                setSelectedEl(null);
+              }}
+            >
+              {editMode ? "Salir del modo edición" : "Habilitar modo edición"}
+            </button>
+          </div>
         </div>
+        {editMode && entry && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#eef4ff] px-4 py-2 text-xs">
+            {selectedEl ? (
+              <>
+                <span className="font-semibold">{EDIT_LABELS[selectedEl] ?? selectedEl}</span>
+                <label className="flex items-center gap-2">
+                  Tamaño
+                  <input
+                    type="range"
+                    min={40}
+                    max={220}
+                    value={Math.round(layoutOf(selectedEl).s * 100)}
+                    onChange={(e) => setLayout(selectedEl, { s: Number(e.target.value) / 100 })}
+                  />
+                  <span className="w-9 tabular-nums">{Math.round(layoutOf(selectedEl).s * 100)}%</span>
+                </label>
+                <button className="btn px-2 py-0.5 text-xs" onClick={() => resetLayout(selectedEl)}>
+                  Volver a su lugar
+                </button>
+              </>
+            ) : (
+              <span className="text-soft">Arrastra cualquier texto o pieza para acomodarla. Haz clic en una para cambiarle el tamaño; con las flechas se mueve fino.</span>
+            )}
+            <button className="btn ml-auto px-2 py-0.5 text-xs" onClick={() => resetLayout()}>
+              Restablecer todo
+            </button>
+          </div>
+        )}
         <div ref={boxRef} className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4">
           {entry ? (
             <div className="relative shadow-[0_10px_40px_rgba(40,30,20,0.18)]" style={{ width: preview.cssW, height: preview.cssH }}>
@@ -589,6 +671,19 @@ export default function Studio() {
                 <div
                   className="pointer-events-none absolute border border-dashed border-[#ff2bd6]"
                   style={{ inset: preview.bleedCss }}
+                />
+              )}
+              {editMode && (
+                <EditLayer
+                  boxes={editBoxes}
+                  trimW={trimCss.w}
+                  trimH={trimCss.h}
+                  selected={selectedEl}
+                  onSelect={setSelectedEl}
+                  onMove={(id, dx, dy) => {
+                    const l = layoutOf(id);
+                    setLayout(id, { dx: l.dx + dx, dy: l.dy + dy });
+                  }}
                 />
               )}
             </div>
@@ -710,6 +805,7 @@ export default function Studio() {
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <Check label="Código Spotify" checked={settings.showCode} onChange={(v) => patchSettings({ showCode: v })} />
+            <Check label="Made By Vinilkiza" checked={settings.showMadeBy} onChange={(v) => patchSettings({ showMadeBy: v })} />
             {settings.product !== "poster-album" && (
               <Check label="Reproductor" checked={settings.showPlayer} onChange={(v) => patchSettings({ showPlayer: v })} />
             )}

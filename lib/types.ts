@@ -46,6 +46,8 @@ export interface DesignContent {
   release?: string;
   length?: string;
   feat?: string;
+  // Posiciones ajustadas a mano en el modo edición (desplazamiento en fracción del ancho/alto y escala)
+  layout?: Record<string, { dx: number; dy: number; s: number }>;
 }
 
 export interface BatchEntry {
@@ -68,4 +70,5 @@ export interface DesignSettings {
   showPlayer: boolean;
   albumStyle: AlbumStyle;
   lang: Lang;
+  showMadeBy: boolean;
 }

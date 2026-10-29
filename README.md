@@ -39,6 +39,21 @@ Los ajustes de estilo y medida se aplican a **todo el lote**. El lote se guarda 
 
 La línea punteada rosada de la vista previa es la **línea de corte**; lo que queda por fuera es sangrado.
 
+## Modo edición y firma
+
+- **Made By Vinilkiza** (Montserrat Black) sale arriba a la derecha en todos los diseños; se apaga con la casilla "Made By Vinilkiza".
+- **Habilitar modo edición** (arriba de la vista previa): cada texto y pieza se puede arrastrar con el mouse, cambiarle el
+  tamaño con la barra, moverlo fino con las flechas (Shift = más rápido) o devolverlo a su lugar. Los cambios se guardan
+  por diseño y salen igual en el PDF, PNG, mockup y video.
+
+## Normas de texto
+
+- Nada se corta: los nombres largos bajan de línea (máximo 2 por canción) o se achican lo justo.
+- Todas las canciones van del mismo tamaño y las columnas quedan parejas.
+- Tamaño mínimo al imprimir: 1,6 mm de alto de mayúscula en listas (~7 pt) y 1,2 mm en datos pequeños.
+  Si un álbum tiene tantas canciones que no alcanza, la portada se achica un poco para darles espacio.
+- En canción, polaroid y placa la foto toma el espacio que sobra después de los textos.
+
 ## Límites que pone Spotify (no son del programa)
 
 - **Playlists:** desde febrero de 2026 Spotify solo entrega la lista de canciones de playlists **propias o colaborativas** de la cuenta. De playlists ajenas llega el nombre, la portada y el dueño; las canciones se escriben a mano en el campo *Lista de canciones*.

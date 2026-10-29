@@ -7,6 +7,7 @@ import "@fontsource/playfair-display/400-italic.css";
 import "@fontsource/playfair-display/700.css";
 import "@fontsource/anton/400.css";
 import "@fontsource/bebas-neue/400.css";
+import "@fontsource/montserrat/900.css";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/400-italic.css";
 import "@fontsource/space-mono/700.css";

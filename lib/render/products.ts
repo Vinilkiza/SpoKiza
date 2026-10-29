@@ -87,6 +87,7 @@ export const DEFAULT_SETTINGS: DesignSettings = {
   showPlayer: false,
   albumStyle: "titular",
   lang: "es",
+  showMadeBy: true,
 };
 
 export interface FontDef {

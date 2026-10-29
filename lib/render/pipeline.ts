@@ -5,6 +5,7 @@ import { codeBarColor, extractPalette, themeColors } from "./color";
 import type { Img } from "./draw";
 import { renderDesign, type RenderAssets } from "./templates";
 import { ALBUM_STYLES } from "./products";
+import type { EditBox } from "./kit";
 
 /* Carga de imágenes con caché, preparación de colores y render a cualquier resolución. */
 
@@ -92,6 +93,7 @@ export function sizePx(settings: DesignSettings, pxPerMm: number) {
 export function renderCanvas(
   entry: BatchEntry, settings: DesignSettings, assets: RenderAssets, pxPerMm: number,
   target?: HTMLCanvasElement,
+  boxes?: EditBox[],
 ): HTMLCanvasElement {
   const { W, H, bleed } = sizePx(settings, pxPerMm);
   const canvas = target ?? document.createElement("canvas");
@@ -99,7 +101,7 @@ export function renderCanvas(
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("El navegador no pudo crear el lienzo (archivo muy grande).");
-  renderDesign(ctx, { W, H, bleed, settings, content: entry.content, item: entry.item, assets });
+  renderDesign(ctx, { W, H, bleed, settings, content: entry.content, item: entry.item, assets, boxes });
   return canvas;
 }
 
@@ -111,7 +113,7 @@ export async function ensureFonts() {
   const specs = [
     "800 40px 'Inter'", "600 40px 'Inter'", "500 40px 'Inter'", "400 40px 'Inter'",
     "700 40px 'Playfair Display'", "italic 400 40px 'Playfair Display'",
-    "400 40px 'Anton'", "400 40px 'Bebas Neue'", "400 40px 'Space Mono'", "700 40px 'Space Mono'", "italic 400 40px 'Space Mono'",
+    "400 40px 'Anton'", "400 40px 'Bebas Neue'", "900 40px 'Montserrat'", "400 40px 'Space Mono'", "700 40px 'Space Mono'", "italic 400 40px 'Space Mono'",
   ];
   await Promise.all(specs.map((s) => document.fonts.load(s).catch(() => null)));
 }
