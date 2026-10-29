@@ -112,6 +112,7 @@ export async function ensureFonts() {
   if (typeof document === "undefined") return;
   const specs = [
     "800 40px 'Inter'", "600 40px 'Inter'", "500 40px 'Inter'", "400 40px 'Inter'",
+    "500 40px 'Montserrat'", "600 40px 'Montserrat'", "700 40px 'Montserrat'", "800 40px 'Montserrat'",
     "700 40px 'Playfair Display'", "italic 400 40px 'Playfair Display'",
     "400 40px 'Anton'", "400 40px 'Bebas Neue'", "900 40px 'Montserrat'", "400 40px 'Space Mono'", "700 40px 'Space Mono'", "italic 400 40px 'Space Mono'",
   ];

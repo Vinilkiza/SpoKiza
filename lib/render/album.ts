@@ -162,7 +162,7 @@ function minimal(k: Kit, f: Frame, scale: number) {
   movable(k, "info", () =>
     items.forEach(([label, value], i) => {
       const x = X + i * slotW;
-      capText(ctx, UP(label), x, footerTop, lCap, { family: "'Inter'", weight: 500, color: k.muted, spacing: 0.12, maxW: slotW - 2 * u });
+      capText(ctx, UP(label), x, footerTop, lCap, { family: "'Montserrat'", weight: 600, color: k.muted, spacing: 0.12, maxW: slotW - 2 * u });
       const fw = fitWrap(ctx, value, vCap, F.body, F.bodyWeight, slotW - 2.5 * u, 2);
       fw.lines.forEach((line, j) =>
         capText(ctx, line, x, footerTop + lCap + 1.8 * u + j * vCap * 1.6, fw.cap, { family: F.body, weight: F.bodyWeight, color: k.fg, maxW: slotW - 2.5 * u }),
@@ -433,7 +433,7 @@ function landscape(k: Kit, f: Frame, o: RenderOpts, style: AlbumStyle, scale: nu
   movable(k, "info", () =>
     items.forEach(([label, value], i) => {
       const x = ix + i * slotW;
-      capText(ctx, UP(label), x, footerTop, lCap, { family: "'Inter'", weight: 500, color: k.muted, spacing: 0.1, maxW: slotW - 2 * u });
+      capText(ctx, UP(label), x, footerTop, lCap, { family: "'Montserrat'", weight: 600, color: k.muted, spacing: 0.1, maxW: slotW - 2 * u });
       const fw = fitWrap(ctx, t.upper ? UP(value) : value, vCap, F.body, F.bodyWeight, slotW - 2 * u, 2);
       fw.lines.forEach((line, j) =>
         capText(ctx, line, x, footerTop + lCap + 1.8 * u + j * vCap * 1.6, fw.cap, { family: F.body, weight: F.bodyWeight, color: k.fg, maxW: slotW - 2 * u }),

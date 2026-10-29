@@ -88,7 +88,7 @@ export function drawPlaceholder(ctx: Ctx, x: number, y: number, w: number, h: nu
   ctx.fillStyle = ink;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  setFont(ctx, "'Inter'", Math.min(w, h) * 0.06, 600);
+  setFont(ctx, "'Montserrat'", Math.min(w, h) * 0.06, 600);
   ctx.fillText("Agrega una imagen", x + w / 2, y + h / 2);
   ctx.restore();
 }

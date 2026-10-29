@@ -405,7 +405,7 @@ export function player(k: Kit, x: number, y: number, w: number, u: number): numb
   const { colors } = k.o.assets;
   drawBox({ x, y, w, h: thick * 2 }, () => drawPlayerBar(k.ctx, x, y + thick, w, progress(k), colors.fg, colors.track, thick));
   const ty = y + thick * 2 + timeCap * 0.9;
-  const st = { family: "'Inter'", weight: 500, color: k.muted };
+  const st = { family: "'Montserrat'", weight: 600, color: k.muted };
   capText(k.ctx, k.o.content.elapsed, x, ty, timeCap, st);
   capText(k.ctx, k.o.content.duration ? `-${remaining(k)}` : "", x + w, ty, timeCap, { ...st, align: "right" });
   const cy = ty + timeCap * 1.7 + icon * 0.78;

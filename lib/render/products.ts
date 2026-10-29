@@ -81,7 +81,7 @@ export const DEFAULT_SETTINGS: DesignSettings = {
   bleedMm: 3,
   dpi: 300,
   theme: "claro",
-  font: "condensada",
+  font: "moderna",
   showCode: true,
   showPalette: true,
   showPlayer: false,
@@ -102,7 +102,7 @@ export interface FontDef {
 }
 
 export const FONTS: Record<FontId, FontDef> = {
-  moderna: { label: "Moderna", title: "'Inter'", titleWeight: 800, body: "'Inter'", bodyWeight: 500, bodyBold: 800, bodyScale: 1, italic: "'Playfair Display'" },
+  moderna: { label: "Montserrat", title: "'Montserrat'", titleWeight: 800, body: "'Montserrat'", bodyWeight: 500, bodyBold: 700, bodyScale: 1, italic: "'Playfair Display'" },
   condensada: { label: "Condensada", title: "'Bebas Neue'", titleWeight: 400, body: "'Bebas Neue'", bodyWeight: 400, bodyBold: 400, bodyScale: 1.3, italic: "'Playfair Display'" },
   impacto: { label: "Impacto", title: "'Anton'", titleWeight: 400, body: "'Inter'", bodyWeight: 500, bodyBold: 800, bodyScale: 1, italic: "'Playfair Display'" },
   editorial: { label: "Editorial", title: "'Playfair Display'", titleWeight: 700, body: "'Inter'", bodyWeight: 500, bodyBold: 800, bodyScale: 1, italic: "'Playfair Display'" },
@@ -120,9 +120,9 @@ export interface AlbumStyleDef {
 
 /** Estilos de póster de álbum (inspirados en las referencias de Pinterest). */
 export const ALBUM_STYLES: AlbumStyleDef[] = [
-  { id: "titular", label: "Titular", hint: "Artista arriba, título gigante abajo", theme: "claro", font: "condensada", paper: "#f8f6f9" },
+  { id: "titular", label: "Titular", hint: "Artista arriba, título gigante abajo", theme: "claro", font: "moderna", paper: "#f8f6f9" },
   { id: "minimal", label: "Minimal", hint: "Limpio, con líneas y ficha abajo", theme: "claro", font: "moderna", paper: "#f2f0eb" },
-  { id: "franja", label: "Franja", hint: "Título arriba y barra de colores", theme: "claro", font: "condensada", paper: "#ecebe7" },
+  { id: "franja", label: "Franja", hint: "Título arriba y barra de colores", theme: "claro", font: "moderna", paper: "#ecebe7" },
   { id: "noche", label: "Noche", hint: "Foto a sangre que se funde en negro", theme: "oscuro", font: "moderna", paper: "#f3efe7" },
   { id: "degradado", label: "Degradado", hint: "Foto que se funde al color del álbum", theme: "portada", font: "moderna", paper: "#f3efe7" },
 ];
