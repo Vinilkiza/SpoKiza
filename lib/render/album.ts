@@ -57,8 +57,8 @@ function titular(k: Kit, f: Frame, scale: number) {
   const R = X + c;
 
   const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, c * 0.62, 7.4 * u, 7.4 * u * 1.6, 2);
-  // En Titular la firma va a la derecha, a la altura del nombre del artista
-  madeBy(k, R, m, false, top + artist.cap / 2);
+  // La firma ocupa el margen superior, sin competir con el nombre del artista.
+  madeBy(k, X, m);
   movable(k, "artist", () => drawFitted(ctx, artist, X, top, { ...tf, color: k.fg }));
   let y = top + Math.max(artist.height, 5 * u) + 3.4 * u;
   cover(k, X + (c - cs) / 2, y, cs, cs);
@@ -117,7 +117,7 @@ function minimal(k: Kit, f: Frame, scale: number) {
   const { ctx, F } = k;
   const { m, c: cs, text: c, u, X, top, bottom } = column(f, 1.58, scale);
   const R = X + c;
-  madeBy(k, R, m);
+  madeBy(k, X, m);
   let y = top;
   cover(k, X + (c - cs) / 2, y, cs, cs);
   y += cs + 4.4 * u;
@@ -184,7 +184,7 @@ function franja(k: Kit, f: Frame, scale: number) {
   const { m, c: cs, text: c, u, X, top, bottom } = column(f, 1.68, scale);
   const R = X + c;
   const tf = { family: F.title, weight: F.titleWeight };
-  madeBy(k, R, m);
+  madeBy(k, X, m);
   rule(k, X, top, c, 0.45 * u);
   let y = top + 0.45 * u + 3 * u;
 
@@ -292,7 +292,7 @@ function noche(k: Kit, f: Frame, o: RenderOpts, scale: number) {
   const side = o.W;
   const infoTop = Math.min(side * 0.8, bottom - 46 * u) - (1 - scale) * f.th * 0.6;
   bleedImage(k, { x: 0, y: 0, w: o.W, h: side }, infoTop - side * 0.42, infoTop + 1.5 * u, "down");
-  madeBy(k, R, m, true);
+  madeBy(k, X, m, true);
 
   const bold = F.bodyBold;
   const cap = 1.55 * u;
@@ -351,7 +351,7 @@ function degradado(k: Kit, f: Frame, o: RenderOpts, scale: number) {
   const bottom = f.y0 + f.th - m;
   const infoTop = Math.min(f.y0 + f.th * 0.63, bottom - 50 * u) - (1 - scale) * f.th * 0.6;
   bleedImage(k, { x: 0, y: 0, w: o.W, h: infoTop + 8 * u }, infoTop - f.th * 0.2, infoTop + 1 * u, "down");
-  madeBy(k, R, m, true);
+  madeBy(k, X, m, true);
 
   // Paleta: 5 cuadros iguales alineados con la columna derecha y centrados con el título
   const showPal = o.settings.showPalette && k.palette.length > 0;
@@ -420,7 +420,7 @@ function landscape(k: Kit, f: Frame, o: RenderOpts, style: AlbumStyle, scale: nu
   const bottom = f.y0 + f.th - m;
   const tf = { family: F.title, weight: F.titleWeight };
   const bw = t.bold ? F.bodyBold : F.bodyWeight;
-  madeBy(k, R, m * 0.9);
+  madeBy(k, coverX, m * 0.9, fullBleed);
 
   const sw = 3.6 * u;
   const n = o.settings.showPalette ? Math.min(5, k.palette.length) : 0;
