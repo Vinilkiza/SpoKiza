@@ -35,6 +35,8 @@ End If
 
 ' Encender el programa en segundo plano si no esta encendido
 If Not Encendido() Then
+  ' Buscar actualizaciones en GitHub antes de encender
+  sh.Run "cmd /c node scripts\update.mjs", 0, True
   sh.Run "cmd /c npm run dev -- -p 3000", 0, False
   For i = 1 To 90
     WScript.Sleep 1000

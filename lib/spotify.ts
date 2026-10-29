@@ -1,6 +1,7 @@
 import "server-only";
 import type { MusicItem, MusicKind, TrackLine } from "./types";
 import { isShortLink, parseSpotifyRef, type ParsedRef } from "./parse";
+import { loadKeys } from "./keys";
 
 /* Conexión a la Web API de Spotify con Client Credentials.
    El Client Secret nunca sale del servidor (vive en .env.local). */
@@ -34,8 +35,7 @@ export function resetToken() {
 
 async function getToken(): Promise<string> {
   if (cached && Date.now() < cached.expiresAt - 60_000) return cached.token;
-  const id = process.env.SPOTIFY_CLIENT_ID;
-  const secret = process.env.SPOTIFY_CLIENT_SECRET;
+  const { id, secret } = loadKeys();
   if (!id || !secret) {
     throw new SpotifyError(
       "Falta conectar Spotify: pega el Client ID y el Client Secret en la pantalla de configuración.",

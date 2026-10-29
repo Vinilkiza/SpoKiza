@@ -15,6 +15,9 @@ Editor para crear **posters de álbum, posters de canción, polaroids y placas t
 4. **Conectar Spotify (solo la primera vez)**: el programa muestra una pantalla con los pasos para sacar el Client ID y el
    Client Secret en developer.spotify.com (cuenta **Premium**) y los guarda solo.
 
+**Actualizaciones automáticas:** cada vez que se abre SpoKiza revisa GitHub (repositorio público Vinilkiza/SpoKiza) y, si hay
+una versión nueva, la descarga sola. Las claves de Spotify se guardan aparte (carpeta del usuario, `.spokiza`), así que no se pierden.
+
 `iniciar.bat` sigue funcionando como alternativa (abre con la ventana negra visible, útil para ver errores).
 El programa queda encendido en segundo plano hasta que se apaga o reinicia el PC; al volver a abrir el icono, abre al instante.
 

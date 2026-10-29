@@ -1,34 +1,19 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import { resetToken, testCredentials } from "@/lib/spotify";
+import { loadKeys, saveKeys } from "@/lib/keys";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /* Configuración de Spotify desde el mismo programa (solo cuando corre en el PC).
-   Guarda las claves en .env.local para no tener que editar archivos a mano. */
+   Guarda las claves en la carpeta del usuario para que sobrevivan a las actualizaciones. */
 
 const isLocal = () => !process.env.VERCEL;
-const ENV_FILE = () => path.join(process.cwd(), ".env.local");
-
 export async function GET() {
   return NextResponse.json({
-    configured: Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET),
+    configured: Boolean(loadKeys().id && loadKeys().secret),
     canSave: isLocal(),
   });
-}
-
-async function writeEnv(values: Record<string, string>) {
-  let current = "";
-  try {
-    current = await fs.readFile(ENV_FILE(), "utf8");
-  } catch {
-    /* todavía no existe */
-  }
-  const lines = current.split(/\r?\n/).filter((l) => l.trim() && !Object.keys(values).some((k) => l.startsWith(`${k}=`)));
-  for (const [k, v] of Object.entries(values)) lines.push(`${k}=${v}`);
-  await fs.writeFile(ENV_FILE(), lines.join("\n") + "\n", "utf8");
 }
 
 export async function POST(req: Request) {
@@ -53,9 +38,9 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  await writeEnv({ SPOTIFY_CLIENT_ID: clientId, SPOTIFY_CLIENT_SECRET: clientSecret });
-  process.env.SPOTIFY_CLIENT_ID = clientId;
-  process.env.SPOTIFY_CLIENT_SECRET = clientSecret;
+  await saveKeys(clientId, clientSecret);
+  delete process.env.SPOTIFY_CLIENT_ID;
+  delete process.env.SPOTIFY_CLIENT_SECRET;
   resetToken();
   return NextResponse.json({ ok: true });
 }
