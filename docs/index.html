@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arma tu diseño · Vinilkiza</title>
+<meta name="description" content="Escoge cómo quieres tu póster, polaroid o placa y envíanos el pedido por WhatsApp.">
+<meta name="theme-color" content="#f3efe7">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Montserrat:wght@500;600;700;800;900&family=Playfair+Display:wght@700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* ====== Número de WhatsApp de Vinilkiza ======
+     Se puede poner aquí o en el link: ...?tel=573001234567
+     (con 57 adelante, sin + ni espacios). */
+  :root {
+    --bg: #f3efe7; --card: #fbfaf7; --ink: #181512; --soft: #6e665d; --line: #ddd5c9;
+    --sel: #181512; --wa: #1fa855;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Montserrat, Arial, sans-serif; }
+  body { padding-bottom: 110px; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+  header { text-align: center; padding: 28px 0 8px; }
+  .brand { font-weight: 900; letter-spacing: .02em; font-size: 15px; color: var(--soft); }
+  h1 { font-weight: 900; font-size: clamp(30px, 8vw, 46px); margin: 6px 0 6px; line-height: 1.05; }
+  .lead { font-size: 17px; font-weight: 500; color: var(--soft); margin: 0 auto; max-width: 30em; line-height: 1.4; }
+  section { background: var(--card); border-radius: 22px; padding: 20px 16px 22px; margin: 18px 0; box-shadow: 0 4px 18px rgba(60,40,20,.07); }
+  section.hidden { display: none; }
+  .head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .num { flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 19px; }
+  h2 { font-size: 22px; font-weight: 900; margin: 0; }
+  .hint { font-size: 15px; color: var(--soft); font-weight: 500; margin: 4px 0 14px 50px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (min-width: 560px) { .grid.g4 { grid-template-columns: repeat(4, 1fr); } .grid.g3 { grid-template-columns: repeat(3, 1fr); } }
+  #colors { grid-template-columns: repeat(3, 1fr); }
+  .tile { min-width: 0; }
+    .tile { position: relative; border: 3px solid transparent; border-radius: 16px; background: #f1ece4; padding: 10px 8px 10px; text-align: center; cursor: pointer; font: inherit; color: inherit; transition: transform .08s; }
+  .tile:active { transform: scale(.97); }
+  .tile img { width: 100%; height: auto; display: block; border-radius: 6px; box-shadow: 0 3px 10px rgba(40,25,10,.18); background: #ddd; }
+  .tile .name { display: block; font-weight: 800; font-size: 16px; margin-top: 9px; }
+  .tile .sub { display: block; font-weight: 500; font-size: 12.5px; color: var(--soft); margin-top: 2px; }
+  .tile[aria-pressed="true"] { border-color: var(--sel); background: #fff; }
+  .tile[aria-pressed="true"]::after { content: "✓"; position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; border-radius: 50%; background: var(--sel); color: #fff; font-weight: 900; display: grid; place-items: center; font-size: 17px; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+  .big { padding: 16px 10px; }
+  .big .name { font-size: 20px; margin-top: 0; }
+  .sample { display: block; font-size: 12px; color: var(--soft); font-weight: 600; margin-top: 8px; line-height: 1.5; letter-spacing: .02em; }
+  .font-sample { display: block; font-size: 24px; overflow-wrap: anywhere; line-height: 1.05; padding: 10px 0 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 12px 18px; font: inherit; font-weight: 700; font-size: 16px; color: var(--ink); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .row b { display: block; font-size: 17px; font-weight: 800; }
+  .row small { display: block; font-size: 13.5px; color: var(--soft); font-weight: 500; margin-top: 3px; }
+  .yn { display: flex; gap: 8px; flex: none; }
+  .yn .chip { padding: 10px 18px; }
+  input[type=text], textarea { width: 100%; font: inherit; font-size: 17px; font-weight: 600; padding: 14px 16px; border-radius: 14px; border: 2px solid var(--line); background: #fff; color: var(--ink); }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: var(--ink); }
+  textarea { resize: vertical; min-height: 80px; }
+  label.f { display: block; font-weight: 800; font-size: 16px; margin: 14px 0 8px; }
+  .note { font-size: 14px; color: var(--soft); font-weight: 500; margin: 10px 0 0; }
+  .summary { font-size: 15px; line-height: 1.7; font-weight: 600; background: #eaf7ea; border-radius: 16px; padding: 14px 16px; white-space: pre-line; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(243,239,231,.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); }
+  .send { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 760px; margin: 0 auto; border: 0; border-radius: 16px; background: var(--wa); color: #fff; font: inherit; font-weight: 900; font-size: 19px; padding: 18px; cursor: pointer; box-shadow: 0 6px 18px rgba(31,168,85,.35); }
+  .send svg { width: 26px; height: 26px; }
+  .warn { color: #b3261e; font-weight: 700; font-size: 14px; text-align: center; margin: 0 0 8px; min-height: 1em; }
+  footer { text-align: center; font-size: 13px; color: var(--soft); padding: 8px 0 20px; }
+  footer b { font-weight: 900; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">VINILKIZA</div>
+    <h1>Arma tu diseño</h1>
+    <p class="lead">Toca lo que más te guste. Al final le das al botón verde y nos llega tu pedido por WhatsApp. Ya dejamos marcado lo más pedido.</p>
+  </header>
+
+  <!-- 1 Diseño -->
+  <section id="s-diseno">
+    <div class="head"><span class="num">1</span><h2>¿Qué diseño quieres?</h2></div>
+    <p class="hint">Toca uno</p>
+    <div class="grid g4" id="designs"></div>
+  </section>
+
+  <!-- 2 Colores -->
+  <section id="s-color">
+    <div class="head"><span class="num">2</span><h2>Colores</h2></div>
+    <p class="hint">¿Fondo claro, negro o del color de la foto?</p>
+    <div class="grid g3" id="colors"></div>
+  </section>
+
+  <!-- 3 Idioma -->
+  <section id="s-idioma">
+    <div class="head"><span class="num">3</span><h2>Idioma de los textos</h2></div>
+    <p class="hint">La fecha, el género y la duración</p>
+    <div class="grid" id="langs"></div>
+  </section>
+
+  <!-- 4 Letra -->
+  <section id="s-letra">
+    <div class="head"><span class="num">4</span><h2>Tipo de letra</h2></div>
+    <p class="hint">Toca la que más te guste</p>
+    <div class="grid g3" id="fonts"></div>
+  </section>
+
+
+  <!-- 5 Extras -->
+  <section id="s-extras">
+    <div class="head"><span class="num">5</span><h2>Extras</h2></div>
+    <p class="hint">Sí o no</p>
+    <div id="extras"></div>
+    <div id="ded-wrap" style="display:none">
+      <label class="f" for="ded">Escribe tu dedicatoria</label>
+      <textarea id="ded" maxlength="120" placeholder="Ej: Para Valentina, nuestra canción favorita"></textarea>
+    </div>
+    <p class="note" id="foto-note" style="display:none">📷 Después de enviar el pedido, mándanos la foto por el mismo chat.</p>
+  </section>
+
+  <!-- 6 Canción -->
+  <section id="s-cancion">
+    <div class="head"><span class="num">6</span><h2 id="song-title">¿Qué álbum?</h2></div>
+    <p class="hint">El nombre y el artista, o el link de Spotify</p>
+    <input type="text" id="song" placeholder="Ej: Un Verano Sin Ti – Bad Bunny">
+    <label class="f" for="nombre">Tu nombre (opcional)</label>
+    <input type="text" id="nombre" placeholder="Ej: Laura">
+  </section>
+
+  <!-- Resumen -->
+  <section>
+    <div class="head"><span class="num">✓</span><h2>Tu pedido</h2></div>
+    <p class="hint">Así nos va a llegar</p>
+    <div class="summary" id="summary"></div>
+  </section>
+
+  <footer><b>Made By Vinilkiza</b> · vinilkiza.com · Envíos a todo el país</footer>
+</div>
+
+<div class="bar">
+  <p class="warn" id="warn"></p>
+  <button class="send" id="send" type="button">
+    <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 3C9 3 3.4 8.6 3.4 15.6c0 2.2.6 4.4 1.7 6.3L3 29l7.3-2c1.8 1 3.8 1.5 5.9 1.5 7 0 12.6-5.6 12.6-12.6S23 3 16 3zm0 23.1c-1.9 0-3.8-.5-5.4-1.5l-.4-.2-4.3 1.1 1.2-4.2-.3-.4c-1.1-1.7-1.6-3.6-1.6-5.6C5.2 9.6 10 4.8 16 4.8S26.8 9.6 26.8 15.6 22 26.1 16 26.1zm5.9-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.5.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.8s1.2 3.2 1.4 3.5c.2.2 2.4 3.6 5.7 5 .8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.7.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+    Enviar pedido por WhatsApp
+  </button>
+</div>
+
+<script>
+/* Número de WhatsApp de Vinilkiza (con 57 adelante). También se puede pasar en el link: ?tel=57300... */
+const WHATSAPP = "";
+
+const DESIGNS = [
+  { id: "titular", n: 1, name: "Titular", sub: "Póster de álbum", kind: "album" },
+  { id: "minimal", n: 2, name: "Minimal", sub: "Póster de álbum", kind: "album" },
+  { id: "franja", n: 3, name: "Franja", sub: "Póster de álbum", kind: "album" },
+  { id: "noche", n: 4, name: "Noche", sub: "Póster de álbum", kind: "album", fixedColor: "Negro (propio del diseño)" },
+  { id: "degradado", n: 5, name: "Degradado", sub: "Póster de álbum", kind: "album", fixedColor: "Color de la foto (propio del diseño)" },
+  { id: "cancion", n: 6, name: "Canción", sub: "Póster con dedicatoria", kind: "cancion" },
+  { id: "polaroid", n: 7, name: "Polaroid", sub: "Para regalar", kind: "polaroid" },
+  { id: "placa", n: 8, name: "Placa", sub: "Tipo Spotify", kind: "placa" },
+];
+const COLOR_IMG = {
+  album: { claro: "color-claro", negro: "color-negro", foto: "color-foto" },
+  cancion: { claro: "cancion", negro: "cancion-negro", foto: "cancion-color" },
+  polaroid: { claro: "polaroid", negro: "polaroid-negro", foto: "polaroid-color" },
+  placa: { claro: "placa-claro", negro: "placa", foto: "placa-color" },
+};
+const COLORS = [ { id: "claro", name: "Claro" }, { id: "negro", name: "Negro" }, { id: "foto", name: "Color de la foto" } ];
+const LANGS = [
+  { id: "es", name: "Español", sample: "FECHA DE LANZAMIENTO<br>14 DE MARZO DE 2025<br>DURACIÓN: 42:26" },
+  { id: "en", name: "English", sample: "RELEASE DATE<br>MARCH 14TH, 2025<br>LENGTH: 42:26" },
+];
+const FONTS = [
+  { id: "Montserrat", css: "Montserrat", weight: 800, text: "CIUDAD DORADA" },
+  { id: "Condensada", css: "'Bebas Neue'", weight: 400, text: "CIUDAD DORADA" },
+  { id: "Editorial", css: "'Playfair Display'", weight: 700, text: "Ciudad Dorada" },
+  { id: "Impacto", css: "Anton", weight: 400, text: "CIUDAD DORADA" },
+  { id: "Mono", css: "'Space Mono'", weight: 700, text: "CIUDAD DORADA" },
+];
+
+const state = { design: "titular", color: "claro", lang: "es", font: "Montserrat",
+  code: true, palette: true, photo: false, dedication: false };
+
+const $ = (id) => document.getElementById(id);
+const design = () => DESIGNS.find((d) => d.id === state.design);
+
+function tile(html, pressed, onClick, cls = "") {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "tile " + cls;
+  b.setAttribute("aria-pressed", pressed ? "true" : "false");
+  b.innerHTML = html;
+  b.onclick = onClick;
+  return b;
+}
+function chip(text, pressed, onClick) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "chip";
+  b.textContent = text;
+  b.setAttribute("aria-pressed", pressed ? "true" : "false");
+  b.onclick = onClick;
+  return b;
+}
+
+function render() {
+  const d = design();
+  // 1 Diseño
+  const dg = $("designs"); dg.innerHTML = "";
+  DESIGNS.forEach((x) => dg.appendChild(tile(
+    `<img src="img/${x.id}.jpg" alt="Diseño ${x.name}" loading="lazy"><span class="name">${x.n}. ${x.name}</span><span class="sub">${x.sub}</span>`,
+    x.id === state.design,
+    () => {
+      const prevKind = d.kind;
+      state.design = x.id;
+      if (x.kind === "placa" && prevKind !== "placa") state.color = "negro";
+      if (x.kind !== "placa" && prevKind === "placa" && state.color === "negro") state.color = "claro";
+      render();
+    })));
+
+  // 2 Colores
+  const fixed = d.fixedColor;
+  $("s-color").classList.toggle("hidden", !!fixed);
+  const cg = $("colors"); cg.innerHTML = "";
+  COLORS.forEach((c) => cg.appendChild(tile(
+    `<img src="img/${COLOR_IMG[d.kind][c.id]}.jpg" alt="${c.name}" loading="lazy"><span class="name">${c.name}</span>`,
+    c.id === state.color, () => { state.color = c.id; render(); })));
+
+  // 3 Idioma (solo el póster de álbum tiene esos textos)
+  $("s-idioma").classList.toggle("hidden", d.kind !== "album");
+  const lg = $("langs"); lg.innerHTML = "";
+  LANGS.forEach((l) => lg.appendChild(tile(
+    `<span class="name">${l.name}</span><span class="sample">${l.sample}</span>`,
+    l.id === state.lang, () => { state.lang = l.id; render(); }, "big")));
+
+  // 4 Letra
+  const fg = $("fonts"); fg.innerHTML = "";
+  FONTS.forEach((f) => fg.appendChild(tile(
+    `<span class="font-sample" style="font-family:${f.css};font-weight:${f.weight}">${f.text}</span><span class="name">${f.id}</span>`,
+    f.id === state.font, () => { state.font = f.id; render(); }, "big")));
+
+  // 6 Extras
+  const ex = $("extras"); ex.innerHTML = "";
+  const rows = [
+    ["code", "Código de Spotify", "Se escanea con el celular y suena la canción", true],
+    ["palette", "Paleta de colores", "Los 5 colores de la portada", d.kind === "album"],
+    ["photo", "Foto propia", "Tu foto en vez de la portada del álbum", true],
+    ["dedication", "Dedicatoria", "Una frase corta", d.kind === "cancion" || d.kind === "polaroid"],
+  ];
+  rows.filter((r) => r[3]).forEach(([key, title, sub]) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<div><b>${title}</b><small>${sub}</small></div>`;
+    const yn = document.createElement("div");
+    yn.className = "yn";
+    yn.appendChild(chip("Sí", state[key], () => { state[key] = true; render(); }));
+    yn.appendChild(chip("No", !state[key], () => { state[key] = false; render(); }));
+    row.appendChild(yn);
+    ex.appendChild(row);
+  });
+  const dedOn = state.dedication && (d.kind === "cancion" || d.kind === "polaroid");
+  $("ded-wrap").style.display = dedOn ? "block" : "none";
+  $("foto-note").style.display = state.photo || d.kind === "polaroid" ? "block" : "none";
+
+  // 7 Canción
+  $("song-title").textContent = d.kind === "album" ? "¿Qué álbum?" : "¿Qué canción?";
+  $("song").placeholder = d.kind === "album" ? "Ej: Un Verano Sin Ti – Bad Bunny" : "Ej: Tití Me Preguntó – Bad Bunny";
+
+  // numerar solo los pasos visibles
+  let n = 0;
+  document.querySelectorAll("section[id^='s-']").forEach((sec) => {
+    if (!sec.classList.contains("hidden")) sec.querySelector(".num").textContent = ++n;
+  });
+  $("summary").textContent = message();
+}
+
+function message() {
+  const d = design();
+  const L = [];
+  const nombre = $("nombre").value.trim();
+  L.push(nombre ? `Hola Vinilkiza, soy ${nombre}. Quiero este pedido:` : "Hola Vinilkiza, quiero este pedido:");
+  L.push(`• Diseño: ${d.n}. ${d.name} (${d.sub})`);
+  L.push(`• Colores: ${d.fixedColor || COLORS.find((c) => c.id === state.color).name}`);
+  if (d.kind === "album") L.push(`• Idioma: ${state.lang === "es" ? "Español" : "Inglés"}`);
+  L.push(`• Letra: ${state.font}`);
+  L.push(`• Código de Spotify: ${state.code ? "Sí" : "No"}`);
+  if (d.kind === "album") L.push(`• Paleta de colores: ${state.palette ? "Sí" : "No"}`);
+  L.push(`• Foto propia: ${state.photo ? "Sí (se las mando)" : "No"}`);
+  if (d.kind === "cancion" || d.kind === "polaroid") {
+    const ded = $("ded").value.trim();
+    L.push(`• Dedicatoria: ${state.dedication ? (ded ? `"${ded}"` : "Sí (se las escribo)") : "No"}`);
+  }
+  const song = $("song").value.trim();
+  L.push(`• ${d.kind === "album" ? "Álbum" : "Canción"}: ${song || "(falta)"}`);
+  return L.join("\n");
+}
+
+["song", "nombre", "ded"].forEach((id) => $(id).addEventListener("input", () => { $("summary").textContent = message(); $("warn").textContent = ""; }));
+
+$("send").onclick = () => {
+  if (!$("song").value.trim()) {
+    $("warn").textContent = (design().kind === "album" ? "Escribe el álbum en el paso " : "Escribe la canción en el paso ") + document.querySelector("#s-cancion .num").textContent;
+    $("s-cancion").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("song").focus();
+    return;
+  }
+  const tel = (new URLSearchParams(location.search).get("tel") || WHATSAPP).replace(/\D/g, "");
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(message())}`;
+  window.location.href = url;
+};
+
+render();
+</script>
+</body>
+</html>
