@@ -39,6 +39,15 @@ Los ajustes de estilo y medida se aplican a **todo el lote**. El lote se guarda 
 
 La línea punteada rosada de la vista previa es la **línea de corte**; lo que queda por fuera es sangrado.
 
+## Hoja de impresión (33 × 48 cm)
+
+- En **Exportar este diseño** el botón **PDF en hoja 33 × 48 cm** saca el diseño a su tamaño real, ya puesto en la hoja,
+  con marcas de corte: se manda directo a imprimir, sin pasar por Photoshop.
+- En **Hoja de impresión** se cambia la medida de la hoja (33 × 48 viene por defecto), si va arriba a la izquierda o
+  centrado, el margen, las copias y las marcas de corte. La hoja elegida se recuerda.
+- Si caben varios (por ejemplo polaroids), se acomodan solos en la hoja y se giran si así caben más.
+  "Todo el lote en hojas" hace lo mismo con todos los diseños del lote.
+
 ## Modo edición y firma
 
 - **Made By Vinilkiza** (Montserrat Black) sale arriba a la derecha en todos los diseños; se apaga con la casilla "Made By Vinilkiza".

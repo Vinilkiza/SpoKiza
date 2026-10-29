@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
+import { degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 
 /* PDF de impresión: imagen a 300 DPI con sangrado, marcas de corte,
    TrimBox/BleedBox y una línea de información fuera del área de corte. */
@@ -81,6 +81,7 @@ export interface SheetSpec {
 }
 
 export const SHEETS: SheetSpec[] = [
+  { label: "Hoja 33 × 48 cm", w: 330, h: 480 },
   { label: "Carta (21,6 × 27,9 cm)", w: 215.9, h: 279.4 },
   { label: "Oficio (21,6 × 33 cm)", w: 215.9, h: 330 },
   { label: "A4 (21 × 29,7 cm)", w: 210, h: 297 },
@@ -89,78 +90,115 @@ export const SHEETS: SheetSpec[] = [
   { label: "Pliego 1/4 (35 × 50 cm)", w: 350, h: 500 },
 ];
 
+export interface SheetOptions {
+  marginMm: number; // margen desde el borde de la hoja
+  align: "esquina" | "centro"; // arriba a la izquierda o centrado
+  marks: boolean; // marcas de corte
+}
+
+const fmtCm = (mmv: number) => (Math.round(mmv) / 10).toString().replace(".", ",");
+
 /**
- * Pliego: acomoda varios diseños del mismo tamaño en hojas, con marcas de corte
- * en los bordes de la hoja alineadas con cada fila y columna.
+ * Hoja de impresión: pone los diseños a tamaño real en la hoja elegida (por ejemplo 33 × 48 cm),
+ * tantos como quepan, girándolos 90° si así caben más. Arriba a la izquierda o centrados,
+ * con marcas de corte. La hoja conserva la orientación que se escribió.
  */
-export async function buildSheetPdf(pieces: PdfPiece[], sheet: SheetSpec, copies = 1, marginMm = 10): Promise<{ bytes: Uint8Array; perSheet: number; sheets: number }> {
-  if (!pieces.length) throw new Error("No hay diseños para el pliego");
+export async function buildSheetPdf(
+  pieces: PdfPiece[], sheet: SheetSpec, copies = 1,
+  opts: SheetOptions = { marginMm: 5, align: "esquina", marks: true },
+): Promise<{ bytes: Uint8Array; perSheet: number; sheets: number; rotated: boolean }> {
+  if (!pieces.length) throw new Error("No hay diseños para la hoja");
   const { trimWmm, trimHmm, bleedMm } = pieces[0];
   const pw = trimWmm + 2 * bleedMm;
   const ph = trimHmm + 2 * bleedMm;
+  const m = Math.max(0, opts.marginMm);
+  const EPS = 0.01;
 
-  // Prueba hoja vertical y horizontal; usa la que más piezas acomoda
-  const fit = (sw: number, sh: number) => ({
-    cols: Math.floor((sw - 2 * marginMm) / pw),
-    rows: Math.floor((sh - 2 * marginMm) / ph),
-    sw,
-    sh,
+  const fit = (w: number, h: number) => ({
+    cols: Math.floor((sheet.w - 2 * m + EPS) / w),
+    rows: Math.floor((sheet.h - 2 * m + EPS) / h),
   });
-  const a = fit(sheet.w, sheet.h);
-  const b = fit(sheet.h, sheet.w);
-  const best = a.cols * a.rows >= b.cols * b.rows ? a : b;
-  const perSheet = best.cols * best.rows;
-  if (perSheet < 1) throw new Error("El diseño no cabe en esa hoja con márgenes de 1 cm");
+  const normal = fit(pw, ph);
+  const turned = fit(ph, pw);
+  const rotated = turned.cols * turned.rows > normal.cols * normal.rows;
+  const g = rotated ? turned : normal;
+  const cw = rotated ? ph : pw; // ancho de cada celda en la hoja
+  const chh = rotated ? pw : ph;
+  const perSheet = g.cols * g.rows;
+  if (perSheet < 1) {
+    throw new Error(
+      `El diseño (${fmtCm(pw)} × ${fmtCm(ph)} cm con sangrado) no cabe en la hoja de ${fmtCm(sheet.w)} × ${fmtCm(sheet.h)} cm` +
+        (m ? ` con márgenes de ${fmtCm(m)} cm. Prueba con margen 0.` : "."),
+    );
+  }
 
   const list: PdfPiece[] = [];
   for (const p of pieces) for (let i = 0; i < copies; i++) list.push(p);
 
   const doc = await PDFDocument.create();
   doc.setProducer("SpoKiza");
+  doc.setCreator("SpoKiza");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const embedded = new Map<PdfPiece, Awaited<ReturnType<typeof doc.embedJpg>>>();
   for (const p of pieces) embedded.set(p, await doc.embedJpg(p.jpeg));
 
-  const gridW = best.cols * pw;
-  const gridH = best.rows * ph;
-  const ox = (best.sw - gridW) / 2;
-  const oy = (best.sh - gridH) / 2;
   const sheets = Math.ceil(list.length / perSheet);
-
   for (let s = 0; s < sheets; s++) {
-    const page = doc.addPage([mm(best.sw), mm(best.sh)]);
+    const page = doc.addPage([mm(sheet.w), mm(sheet.h)]);
     const slice = list.slice(s * perSheet, (s + 1) * perSheet);
+    const usedCols = Math.min(g.cols, slice.length);
+    const usedRows = Math.ceil(slice.length / g.cols);
+    const gridW = usedCols * cw;
+    const gridH = usedRows * chh;
+    // origen del grupo (arriba-izquierda), en mm desde la esquina superior izquierda de la hoja
+    const left = opts.align === "centro" ? (sheet.w - gridW) / 2 : m;
+    const topFromTop = opts.align === "centro" ? (sheet.h - gridH) / 2 : m;
+
     slice.forEach((p, i) => {
-      const col = i % best.cols;
-      const row = Math.floor(i / best.cols);
-      const x = ox + col * pw;
-      const y = best.sh - oy - (row + 1) * ph; // filas de arriba hacia abajo
-      page.drawImage(embedded.get(p)!, { x: mm(x), y: mm(y), width: mm(pw), height: mm(ph) });
+      const col = i % g.cols;
+      const row = Math.floor(i / g.cols);
+      const bx = left + col * cw;
+      const byTop = topFromTop + row * chh;
+      const by = sheet.h - byTop - chh; // coordenada PDF (desde abajo)
+      const img = embedded.get(p)!;
+      if (rotated) {
+        page.drawImage(img, { x: mm(bx + cw), y: mm(by), width: mm(pw), height: mm(ph), rotate: degrees(90) });
+      } else {
+        page.drawImage(img, { x: mm(bx), y: mm(by), width: mm(pw), height: mm(ph) });
+      }
     });
-    // Marcas en los bordes de la hoja para cada línea de corte
-    const usedRows = Math.ceil(slice.length / best.cols);
-    const usedCols = Math.min(best.cols, slice.length);
-    const top = best.sh - oy;
-    const bottom = best.sh - oy - usedRows * ph;
-    for (let c = 0; c < usedCols; c++) {
-      for (const cx of [ox + c * pw + bleedMm, ox + (c + 1) * pw - bleedMm]) {
-        mark(page, mm(cx), mm(top + MARK_GAP_MM), mm(cx), mm(Math.min(best.sh - 1, top + MARK_GAP_MM + MARK_LEN_MM)));
-        mark(page, mm(cx), mm(bottom - MARK_GAP_MM), mm(cx), mm(Math.max(1, bottom - MARK_GAP_MM - MARK_LEN_MM)));
+
+    if (opts.marks) {
+      const bw = rotated ? bleedMm : bleedMm; // el sangrado es igual en los 4 lados
+      const gTop = sheet.h - topFromTop; // borde superior del grupo (coordenada PDF)
+      const gBottom = gTop - gridH;
+      const gLeft = left;
+      const gRight = left + gridW;
+      const len = (space: number) => Math.min(MARK_LEN_MM, space - MARK_GAP_MM - 0.5);
+      // líneas verticales de corte (marcas arriba y abajo del grupo)
+      for (let c = 0; c < usedCols; c++) {
+        for (const x of [gLeft + c * cw + bw, gLeft + (c + 1) * cw - bw]) {
+          const up = len(sheet.h - gTop);
+          if (up > 1) mark(page, mm(x), mm(gTop + MARK_GAP_MM), mm(x), mm(gTop + MARK_GAP_MM + up));
+          const down = len(gBottom);
+          if (down > 1) mark(page, mm(x), mm(gBottom - MARK_GAP_MM), mm(x), mm(gBottom - MARK_GAP_MM - down));
+        }
+      }
+      // líneas horizontales de corte (marcas a la izquierda y derecha del grupo)
+      for (let r = 0; r < usedRows; r++) {
+        const rowTop = gTop - r * chh;
+        for (const y of [rowTop - bw, rowTop - chh + bw]) {
+          const l = len(gLeft);
+          if (l > 1) mark(page, mm(gLeft - MARK_GAP_MM), mm(y), mm(gLeft - MARK_GAP_MM - l), mm(y));
+          const rr = len(sheet.w - gRight);
+          if (rr > 1) mark(page, mm(gRight + MARK_GAP_MM), mm(y), mm(gRight + MARK_GAP_MM + rr), mm(y));
+        }
       }
     }
-    const left = ox;
-    const right = ox + usedCols * pw;
-    for (let r = 0; r < usedRows; r++) {
-      const rowTop = top - r * ph;
-      for (const cy of [rowTop - bleedMm, rowTop - ph + bleedMm]) {
-        mark(page, mm(left - MARK_GAP_MM), mm(cy), mm(Math.max(1, left - MARK_GAP_MM - MARK_LEN_MM)), mm(cy));
-        mark(page, mm(right + MARK_GAP_MM), mm(cy), mm(Math.min(best.sw - 1, right + MARK_GAP_MM + MARK_LEN_MM)), mm(cy));
-      }
-    }
-    page.drawText(
-      pdfSafe(`Vinilkiza  ·  ${sheet.label}  ·  hoja ${s + 1}/${sheets}  ·  ${slice.length} piezas de ${fmt(trimWmm / 10)} x ${fmt(trimHmm / 10)} cm`),
-      { x: mm(3), y: mm(2), size: 5.5, font, color: rgb(0.25, 0.25, 0.25) },
-    );
+    const info = pdfSafe(`SpoKiza  ·  ${sheet.label}  ·  hoja ${s + 1}/${sheets}  ·  ${slice.length} x ${fmt(trimWmm / 10)} x ${fmt(trimHmm / 10)} cm`);
+    // la línea de información va en la parte libre más grande (abajo o a la derecha)
+    const freeBottom = sheet.h - topFromTop - gridH;
+    if (freeBottom > 6) page.drawText(info, { x: mm(Math.max(3, left)), y: mm(2.5), size: 6, font, color: rgb(0.3, 0.3, 0.3) });
   }
-  return { bytes: await doc.save(), perSheet, sheets };
+  return { bytes: await doc.save(), perSheet, sheets, rotated };
 }

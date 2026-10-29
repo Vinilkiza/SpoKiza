@@ -34,8 +34,25 @@ export default function Studio() {
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [unit, setUnit] = useState<"cm" | "px">("cm");
   const [showTrim, setShowTrim] = useState(true);
-  const [sheetIdx, setSheetIdx] = useState(0);
+  const [sheet, setSheet] = useState({ w: 330, h: 480, align: "esquina" as "esquina" | "centro", margin: 5, marks: true });
   const [copies, setCopies] = useState(1);
+  // la hoja elegida se recuerda en este computador
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("spokiza-hoja");
+      if (raw) setSheet((s) => ({ ...s, ...JSON.parse(raw) }));
+    } catch {
+      /* sin datos */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem("spokiza-hoja", JSON.stringify(sheet));
+    } catch {
+      /* almacenamiento bloqueado */
+    }
+  }, [sheet]);
+  const sheetLabel = `Hoja ${fmt(sheet.w / 10)} × ${fmt(sheet.h / 10)} cm`;
   const [caption, setCaption] = useState("vinilkiza.com");
   const [zipOpts, setZipOpts] = useState({ png: true, pdf: true, mockup: false });
   const loaded = useRef(false);
@@ -448,13 +465,26 @@ export default function Studio() {
       say("ok", `PDF de ${batch.length} páginas descargado`);
     });
 
-  const exportSheet = () =>
-    run("Armando pliego…", async () => {
-      if (!batch.length) throw new Error("El lote está vacío");
-      const sheet = SHEETS[sheetIdx];
-      const { bytes, perSheet, sheets } = await buildSheetPdf(await collectPieces(), sheet, copies);
-      downloadBlob(new Blob([bytes as BlobPart], { type: "application/pdf" }), `pliego-${safeName(sheet.label)}-${settings.product}.pdf`);
-      say("ok", `Pliego listo: ${perSheet} por hoja, ${sheets} hoja(s)`);
+  const exportSheet = (only?: BatchEntry) =>
+    run("Armando la hoja de impresión…", async () => {
+      const list = only ? [only] : batch;
+      if (!list.length) throw new Error("El lote está vacío");
+      const pieces: PdfPiece[] = [];
+      for (let i = 0; i < list.length; i++) {
+        setBusy(`Preparando diseño ${i + 1} de ${list.length}…`);
+        const { canvas } = await hiRes(list[i]);
+        pieces.push(piece(list[i], await toJpeg(canvas)));
+        free(canvas);
+      }
+      const spec = { label: sheetLabel, w: sheet.w, h: sheet.h };
+      const { bytes, perSheet, sheets, rotated } = await buildSheetPdf(pieces, spec, copies, {
+        marginMm: sheet.margin,
+        align: sheet.align,
+        marks: sheet.marks,
+      });
+      const base = only ? fileBase(only) : `lote-${settings.product}`;
+      downloadBlob(new Blob([bytes as BlobPart], { type: "application/pdf" }), `${base}-${sizeLabel}-en-hoja-${fmt(sheet.w / 10)}x${fmt(sheet.h / 10)}.pdf`);
+      say("ok", `Hoja lista: ${perSheet} por hoja${rotated ? " (girados para que quepan más)" : ""}, ${sheets} hoja(s)`);
     });
 
   /* ---------- medidas ---------- */
@@ -899,6 +929,9 @@ export default function Studio() {
             <button className="btn" disabled={!entry || !!busy} onClick={() => entry && exportMockup(entry)}>Mockup</button>
             <button className="btn" disabled={!entry || !!busy} onClick={() => entry && exportVideo(entry)}>Video vertical</button>
           </div>
+          <button className="btn-dark w-full" disabled={!entry || !!busy} onClick={() => entry && exportSheet(entry)}>
+            PDF en {sheetLabel.replace("Hoja", "hoja")} (listo para imprimir)
+          </button>
           <TextField label="Texto final del video" value={caption} onChange={setCaption} />
         </section>
 
@@ -913,18 +946,43 @@ export default function Studio() {
             <button className="btn-dark" disabled={!batch.length || !!busy} onClick={exportZip}>Descargar ZIP</button>
             <button className="btn" disabled={!batch.length || !!busy} onClick={exportBatchPdf}>PDF multipágina</button>
           </div>
-          <div className="rounded-md border border-line p-2">
-            <span className="label">Pliego (varios por hoja)</span>
-            <select className="field mb-2" value={sheetIdx} onChange={(e) => setSheetIdx(Number(e.target.value))}>
-              {SHEETS.map((s, i) => (
-                <option key={s.label} value={i}>{s.label}</option>
-              ))}
-            </select>
-            <div className="flex items-end gap-2">
-              <NumField label="Copias de cada uno" value={String(copies)} onCommit={(v) => { const n = Math.round(Number(v)); if (n >= 1 && n <= 50) setCopies(n); }} />
-              <button className="btn mb-px" disabled={!batch.length || !!busy} onClick={exportSheet}>Armar pliego</button>
-            </div>
+          <button className="btn w-full" disabled={!batch.length || !!busy} onClick={() => exportSheet()}>
+            Todo el lote en {sheetLabel.replace("Hoja", "hojas")}
+          </button>
+        </section>
+
+        <section className="space-y-2 border-t border-line pt-4">
+          <span className="label">Hoja de impresión</span>
+          <select
+            className="field"
+            value={SHEETS.findIndex((x) => Math.abs(x.w - sheet.w) < 0.5 && Math.abs(x.h - sheet.h) < 0.5)}
+            onChange={(e) => {
+              const sp = SHEETS[Number(e.target.value)];
+              if (sp) setSheet((s) => ({ ...s, w: sp.w, h: sp.h }));
+            }}
+          >
+            {SHEETS.map((x, i) => (
+              <option key={x.label} value={i}>{x.label}</option>
+            ))}
+            <option value={-1}>Personalizada ({fmt(sheet.w / 10)} × {fmt(sheet.h / 10)} cm)</option>
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <NumField label="Ancho hoja (cm)" value={fmt(sheet.w / 10)} onCommit={(v) => { const n = Number(v.replace(",", ".")); if (n > 0 && n <= 200) setSheet((s) => ({ ...s, w: round2(n) * 10 })); }} />
+            <NumField label="Alto hoja (cm)" value={fmt(sheet.h / 10)} onCommit={(v) => { const n = Number(v.replace(",", ".")); if (n > 0 && n <= 200) setSheet((s) => ({ ...s, h: round2(n) * 10 })); }} />
           </div>
+          <div className="flex gap-1">
+            <button className="seg flex-1" data-on={sheet.align === "esquina"} onClick={() => setSheet((s) => ({ ...s, align: "esquina" }))}>Arriba a la izquierda</button>
+            <button className="seg flex-1" data-on={sheet.align === "centro"} onClick={() => setSheet((s) => ({ ...s, align: "centro" }))}>Centrado</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <NumField label="Margen (mm)" value={String(sheet.margin)} onCommit={(v) => { const n = Number(v.replace(",", ".")); if (n >= 0 && n <= 50) setSheet((s) => ({ ...s, margin: n })); }} />
+            <NumField label="Copias de cada uno" value={String(copies)} onCommit={(v) => { const n = Math.round(Number(v)); if (n >= 1 && n <= 50) setCopies(n); }} />
+          </div>
+          <Check label="Marcas de corte" checked={sheet.marks} onChange={(v) => setSheet((s) => ({ ...s, marks: v }))} />
+          <p className="text-[11px] text-soft">
+            El diseño sale a su tamaño real ({fmt(settings.widthCm)} × {fmt(settings.heightCm)} cm + sangrado). Si caben varios, se acomodan solos y se
+            giran si así caben más.
+          </p>
         </section>
       </aside>
 
