@@ -8,7 +8,7 @@ import type { Ctx } from "./draw";
 import { mix } from "./color";
 import {
   type Frame, type Kit, type ListStyle, LINE_GAP, UP, bleedImage, capText, code, codeH, cover, drawFitted,
-  fitLines, fitWrap, infoBlock, infoBlockH, madeBy, MIN_SMALL_MM, makeKit, movable, rule, swatches, tracklist, widthAtCap, drawBox,
+  fitLines, fitWrap, infoBlock, infoBlockH, madeBy, MIN_SMALL_MM, pairs, pairsH, type PairStyle, makeKit, movable, rule, swatches, tracklist, widthAtCap, drawBox,
 } from "./kit";
 
 const STYLE_TEXT: Record<AlbumStyle, { upper: boolean; num: ListStyle["num"]; bold: boolean }> = {
@@ -42,8 +42,8 @@ function column(f: Frame, ratio: number, scale: number) {
   const m = Math.min(f.tw, f.th) * 0.065;
   const full = f.tw - 2 * m;
   const c = Math.min(full, (f.th - 2 * m) / ratio) * scale;
-  // El texto usa el ancho completo aunque la portada se achique
-  const text = Math.max(c, Math.min(full, (f.th - 2 * m) / ratio));
+  // Norma estética: todo el texto se alinea con los bordes de la portada (si la portada cede espacio, el texto también)
+  const text = c;
   return { m, c, text, u: text / 100, X: f.x0 + (f.tw - text) / 2, top: f.y0 + m, bottom: f.y0 + f.th - m };
 }
 
@@ -64,8 +64,8 @@ function titular(k: Kit, f: Frame, scale: number) {
   cover(k, X + (c - cs) / 2, y, cs, cs);
   y += cs + 3.4 * u;
 
-  const rightW = c * 0.4;
-  const leftW = c * 0.55;
+  const rightW = c * 0.36;
+  const leftW = c * 0.6;
 
   // Derecha: paleta, ficha y título gigante
   const gap = 1.1 * u;
@@ -74,20 +74,24 @@ function titular(k: Kit, f: Frame, scale: number) {
   movable(k, "palette", () => swatches(k, 5, R, y, sw, gap));
   ry += k.o.settings.showPalette && k.palette.length ? sw + 3 * u : 0;
   const cap = 2 * u * (F.bodyScale > 1 ? 1.1 : 1);
-  const items = [
-    k.info.genre && `${k.L.genre}: ${k.info.genre}`,
-    k.info.release && `${k.L.release}: ${k.info.release}`,
-    k.info.label && `${k.L.label}: ${k.info.label}`,
-    k.info.length && `${k.L.length}: ${k.info.length}`,
-  ].filter(Boolean).map((s) => UP(s as string));
-  // Norma: el título gigante tiene prioridad; la ficha se acomoda en el espacio que queda encima
+  const items = ([
+    [k.L.genre, k.info.genre],
+    [k.L.release, k.info.release],
+    [k.L.label, k.info.label],
+    [k.L.length, k.info.length],
+  ] as [string, string][]).filter(([, v]) => v);
+  // Norma: el título gigante tiene prioridad; la ficha (dato pequeño arriba, valor debajo) se acomoda en lo que queda
   const title = fitLines(ctx, UP(k.o.content.title || " "), tf.family, tf.weight, c * 0.44, 15 * u, 17 * u, 3);
-  const infoRoom = bottom - title.height - 3 * u - ry;
-  const blockH = (cc: number) => items.reduce((acc, it) => acc + fitWrap(ctx, it, cc, F.body, bw, rightW, 2).lines.length * cc * 2.05, 0);
-  let infoCap = cap;
-  while (infoCap > cap * 0.6 && blockH(infoCap) > infoRoom) infoCap *= 0.93;
+  const infoRoom = bottom - title.height - 4 * u - ry;
+  const minCap = MIN_SMALL_MM * k.mm;
+  const ps = (sc: number): PairStyle => ({
+    align: "right", labelCap: Math.max(minCap, 1.1 * u * sc), valueCap: Math.max(minCap, 1.75 * u * sc), w: rightW,
+    valueFamily: F.body, valueWeight: F.bodyBold, color: k.fg, muted: k.muted,
+  });
+  let sc = 1;
+  while (sc > 0.6 && pairsH(k, items, ps(sc)) > infoRoom) sc *= 0.93;
   const infoY = ry;
-  movable(k, "info", () => infoBlock(ctx, items, R, infoY, infoCap, 2.05, rightW, { family: F.body, weight: bw, color: k.fg, align: "right" }));
+  movable(k, "info", () => pairs(k, items, R, infoY, ps(sc)));
   movable(k, "title", () =>
     title.lines.forEach((l, i) => {
       const yT = bottom - title.height + i * title.cap * (1 + LINE_GAP);
@@ -153,7 +157,7 @@ function minimal(k: Kit, f: Frame, scale: number) {
   movable(k, "tracks", () =>
     tracklist(k, { x: X, y: ly, w: c, h: ruleY - 4 * u - ly }, {
       upper: true, num: "col", maxCap: 1.6 * u, pitch: 2.3,
-      weight: F.bodyWeight, family: F.body, color: k.fg, numColor: k.fg, colGap: 6 * u,
+      weight: F.bodyWeight, family: F.body, color: k.fg, numColor: k.muted, colGap: 6 * u,
     }),
   );
   rule(k, X, ruleY, c, 0.13 * u, k.muted);
@@ -227,17 +231,19 @@ function franja(k: Kit, f: Frame, scale: number) {
   const rw = c * 0.48;
   const room = bottom - ly;
   const minCap = MIN_SMALL_MM * k.mm;
-  const infoItems = [k.info.release, k.info.length].filter(Boolean).map(UP);
+  const infoItems = ([[k.L.release, k.info.release], [k.L.length, k.info.length], [k.L.label, k.info.label]] as [string, string][]).filter(([, v]) => v);
+  const ps = (cap: number): PairStyle => ({
+    align: "right", labelCap: Math.max(minCap, cap * 0.62), valueCap: cap, w: rw,
+    valueFamily: F.body, valueWeight: F.bodyBold, color: k.fg, muted: k.muted,
+  });
   const featText = k.info.feat ? UP(`${k.L.feat} ${k.info.feat}`) : "";
   const measure = (sc: number) => {
     const cap = Math.max(minCap, listCap * sc);
     const cw = c * (0.32 * Math.max(0.7, sc));
     const ch = codeH(k, cw);
     const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, rw, 6 * u * sc, 6 * u * 1.7 * sc, 3);
-    let h = artist.height + 3.6 * u * sc + infoBlockH(ctx, infoItems, cap, 2.1, rw, F.body, F.bodyWeight);
-    if (k.info.label) h += cap * 1.6 + infoBlockH(ctx, [UP(k.L.releasedBy)], cap, 2.1, rw, F.body, F.bodyWeight)
-      + infoBlockH(ctx, [UP(k.info.label)], cap, 2.1, rw, F.body, F.bodyBold);
-    if (ch) h += cap * 1.2 + ch;
+    let h = artist.height + 3.6 * u * sc + pairsH(k, infoItems, ps(cap));
+    if (ch) h += cap * 2.2 + ch;
     const fw = featText ? fitWrap(ctx, featText, cap * 0.92, F.body, F.bodyWeight, rw, 4) : null;
     if (fw) h += cap + fw.lines.length * fw.cap * 2.05 - fw.cap * 1.05;
     return { cap, cw, ch, artist, fw, h, sc };
@@ -258,17 +264,11 @@ function franja(k: Kit, f: Frame, scale: number) {
   const iy = ry;
   const afterInfo = { y: ry };
   movable(k, "info", () => {
-    let yy2 = infoBlock(ctx, infoItems, R, iy, cap, 2.1, rw, body);
-    if (k.info.label) {
-      yy2 += cap * 1.6;
-      yy2 = infoBlock(ctx, [UP(k.L.releasedBy)], R, yy2, cap, 2.1, rw, { ...body, color: k.muted });
-      yy2 = infoBlock(ctx, [UP(k.info.label)], R, yy2, cap, 2.1, rw, { ...body, weight: F.bodyBold });
-    }
-    afterInfo.y = yy2;
+    afterInfo.y = pairs(k, infoItems, R, iy, ps(cap));
   });
   ry = afterInfo.y;
   if (ch) {
-    ry += cap * 1.2;
+    ry += cap * 2.2;
     const cy = ry;
     movable(k, "code", () => code(k, R - cw, cy, cw));
     ry += ch;

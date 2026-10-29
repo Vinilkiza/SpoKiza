@@ -457,28 +457,31 @@ export function tracklist(k: Kit, box: Box, st: ListStyle) {
   if (!n || box.h <= 0 || box.w <= 0) return;
   const { ctx } = k;
   const names = k.tracks.map((t) => (st.upper ? UP(t) : t));
-  const label = (i: number) => (st.num === "col" ? names[i] : st.num === "dot" ? `${i + 1}. ${names[i]}` : `${i + 1} ${names[i]}`);
+  // Los números van en su propia columna (alineados a la derecha) y todos los nombres empiezan en la misma línea
+  const numLabel = (i: number) => (st.num === "col" ? String(i + 1).padStart(n >= 10 ? 2 : 1, "0") : st.num === "dot" ? `${i + 1}.` : `${i + 1}`);
   const minCap = Math.min(st.maxCap * 0.45, MIN_LIST_MM * k.mm * 0.75);
   const maxCols = Math.max(1, Math.min(4, Math.floor((box.w + st.colGap) / (st.maxCap * 7 + st.colGap))));
 
   interface Placed { col: number; line: number; lines: string[] }
-  interface Plan { cap: number; cols: number; colW: number; numW: number; hang: number; items: Placed[]; total: number }
+  interface Plan { cap: number; cols: number; colW: number; numW: number; items: Placed[]; total: number }
 
-  const wrapAll = (cols: number, cap: number) => {
+  const numWidth = (cap: number) =>
+    Math.max(...names.map((_, i) => widthAtCap(ctx, numLabel(i), cap, st.family, st.weight))) + cap * (st.num === "col" ? 1.6 : 0.75);
+
+  const wrapAll = (cols: number, cap: number, maxLines: number) => {
     const colW = (box.w - (cols - 1) * st.colGap) / cols;
-    const numW = st.num === "col" ? widthAtCap(ctx, `${n}.`, cap, st.family, st.weight) + cap * 1.8 : 0;
-    const hang = st.num === "col" ? numW : widthAtCap(ctx, st.num === "dot" ? `${n}. ` : `${n} `, cap, st.family, st.weight);
+    const numW = numWidth(cap);
     const wrapped: string[][] = [];
     for (let i = 0; i < n; i++) {
-      const lines = wrapWords(ctx, label(i), cap, st.family, st.weight, colW - numW, colW - hang);
-      if (!lines || lines.length > 2) return null;
+      const lines = wrapWords(ctx, names[i], cap, st.family, st.weight, colW - numW, colW - numW);
+      if (!lines || lines.length > maxLines) return null;
       wrapped.push(lines);
     }
-    return { colW, numW, hang, wrapped };
+    return { colW, numW, wrapped };
   };
 
-  const place = (cols: number, cap: number, limit: number): Plan | null => {
-    const w = wrapAll(cols, cap);
+  const place = (cols: number, cap: number, limit: number, maxLines: number): Plan | null => {
+    const w = wrapAll(cols, cap, maxLines);
     if (!w) return null;
     const items: Placed[] = [];
     let col = 0;
@@ -493,29 +496,39 @@ export function tracklist(k: Kit, box: Box, st: ListStyle) {
       line += lines.length;
     }
     const total = w.wrapped.reduce((acc, l) => acc + l.length, 0);
-    return { cap, cols, colW: w.colW, numW: w.numW, hang: w.hang, items, total };
+    return { cap, cols, colW: w.colW, numW: w.numW, items, total };
   };
   const capacity = (cap: number) => Math.floor((box.h + (st.pitch - 1) * cap) / (st.pitch * cap));
-  const feasible = (cols: number, cap: number) => (capacity(cap) >= 1 ? place(cols, cap, capacity(cap)) : null);
+  const feasible = (cols: number, cap: number, ml: number) => (capacity(cap) >= 1 ? place(cols, cap, capacity(cap), ml) : null);
 
-  let best: Plan | null = null;
-  for (let cols = 1; cols <= maxCols; cols++) {
-    let plan = feasible(cols, st.maxCap);
-    if (!plan) {
-      if (!feasible(cols, minCap)) continue;
-      let lo = minCap;
-      let hi = st.maxCap;
-      for (let it = 0; it < 14; it++) {
-        const mid = (lo + hi) / 2;
-        if (feasible(cols, mid)) lo = mid;
-        else hi = mid;
+  const search = (ml: number) => {
+    let best: Plan | null = null;
+    for (let cols = 1; cols <= maxCols; cols++) {
+      let plan = feasible(cols, st.maxCap, ml);
+      if (!plan) {
+        if (!feasible(cols, minCap, ml)) continue;
+        let lo = minCap;
+        let hi = st.maxCap;
+        for (let it = 0; it < 14; it++) {
+          const mid = (lo + hi) / 2;
+          if (feasible(cols, mid, ml)) lo = mid;
+          else hi = mid;
+        }
+        plan = feasible(cols, lo, ml);
       }
-      plan = feasible(cols, lo);
+      if (plan && (!best || plan.cap > best.cap * 1.03 || (plan.cap >= best.cap * 0.97 && plan.total < best.total))) best = plan;
     }
-    if (plan && (!best || plan.cap > best.cap * 1.03 || (plan.cap >= best.cap * 0.97 && plan.total < best.total))) best = plan;
-  }
+    return best;
+  };
 
-  if (!best || best.cap < MIN_LIST_MM * k.mm) k.tight = true;
+  // Norma estética: se prefiere que ninguna canción baje de línea, aunque la letra quede un poco más pequeña
+  const two = search(2);
+  const one = search(1);
+  let best = two;
+  if (one && (!two || (one.cap >= two.cap * 0.72 && one.cap >= MIN_LIST_MM * k.mm))) best = one;
+
+  // Muy pequeña frente a lo previsto (o bajo el mínimo legible): se pide más espacio (la portada cede)
+  if (!best || best.cap < Math.max(MIN_LIST_MM * k.mm, st.maxCap * 0.62)) k.tight = true;
 
   if (!best) {
     // Último recurso (listas enormes): letra mínima, un renglón por canción, ajustada al ancho
@@ -523,34 +536,73 @@ export function tracklist(k: Kit, box: Box, st: ListStyle) {
     const cap = minCap;
     const rows = Math.ceil(n / cols);
     const colW = (box.w - (cols - 1) * st.colGap) / cols;
-    names.forEach((_, i) => {
+    names.forEach((name, i) => {
       const x = box.x + Math.floor(i / rows) * (colW + st.colGap);
       const y = box.y + (i % rows) * cap * st.pitch;
-      capText(ctx, label(i), x, y, cap, { family: st.family, weight: st.weight, color: st.color, maxW: colW });
+      capText(ctx, `${numLabel(i)} ${name}`, x, y, cap, { family: st.family, weight: st.weight, color: st.color, maxW: colW });
     });
     return;
   }
 
   // Columnas parejas: el menor alto de columna con el que todo sigue cabiendo
+  const ml = best === one ? 1 : 2;
   const target = Math.ceil(best.total / best.cols);
   for (let limit = target; limit <= capacity(best.cap); limit++) {
-    const balanced = place(best.cols, best.cap, limit);
+    const balanced = place(best.cols, best.cap, limit, ml);
     if (balanced) {
       best = balanced;
       break;
     }
   }
 
-  const { cap, colW, numW, hang } = best;
+  const { cap, colW, numW } = best;
+  const gapNum = cap * (st.num === "col" ? 1.6 : 0.75);
   best.items.forEach((it, i) => {
     const x = box.x + it.col * (colW + st.colGap);
     it.lines.forEach((text, j) => {
       const y = box.y + (it.line + j) * cap * st.pitch;
-      if (st.num === "col" && j === 0) capText(ctx, `${i + 1}.`, x, y, cap, { family: st.family, weight: st.weight, color: st.numColor });
-      const tx = j === 0 ? x + numW : x + hang;
-      capText(ctx, text, tx, y, cap, { family: st.family, weight: st.weight, color: st.color });
+      if (j === 0) capText(ctx, numLabel(i), x + numW - gapNum, y, cap, { family: st.family, weight: st.weight, color: st.numColor, align: "right" });
+      capText(ctx, text, x + numW, y, cap, { family: st.family, weight: st.weight, color: st.color });
     });
   });
+}
+
+/** Pares dato/valor (FECHA DE LANZAMIENTO arriba en pequeño, el valor debajo). */
+export interface PairStyle {
+  align: "left" | "right";
+  labelCap: number;
+  valueCap: number;
+  w: number;
+  valueFamily: string;
+  valueWeight: number;
+  color: string;
+  muted: string;
+  upper?: boolean;
+}
+function pairLayout(k: Kit, items: [string, string][], ps: PairStyle) {
+  return items.map(([label, value]) => {
+    const v = ps.upper === false ? value : UP(value);
+    const fw = fitWrap(k.ctx, v, ps.valueCap, ps.valueFamily, ps.valueWeight, ps.w, 2);
+    return { label: UP(label), fw };
+  });
+}
+export function pairsH(k: Kit, items: [string, string][], ps: PairStyle): number {
+  if (!items.length) return 0;
+  const L = pairLayout(k, items, ps);
+  return L.reduce((acc, it) => acc + ps.labelCap * 2.1 + it.fw.lines.length * ps.valueCap * 1.75, 0) + (L.length - 1) * ps.valueCap * 1.5 - ps.valueCap * 0.75;
+}
+export function pairs(k: Kit, items: [string, string][], x: number, y: number, ps: PairStyle): number {
+  const L = pairLayout(k, items, ps);
+  L.forEach((it, i) => {
+    capText(k.ctx, it.label, x, y, ps.labelCap, { family: "'Montserrat'", weight: 600, color: ps.muted, align: ps.align, spacing: 0.14, maxW: ps.w });
+    y += ps.labelCap * 2.1;
+    it.fw.lines.forEach((line) => {
+      capText(k.ctx, line, x, y + (ps.valueCap - it.fw.cap), it.fw.cap, { family: ps.valueFamily, weight: ps.valueWeight, color: ps.color, align: ps.align, maxW: ps.w });
+      y += ps.valueCap * 1.75;
+    });
+    if (i < L.length - 1) y += ps.valueCap * 1.5;
+  });
+  return y;
 }
 
 /** Siempre 5 colores, ordenados de oscuro a claro (si la portada tiene menos, se completan con mezclas). */
