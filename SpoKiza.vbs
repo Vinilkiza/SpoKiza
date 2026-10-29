@@ -33,6 +33,12 @@ If Not fso.FolderExists(dir & "\node_modules") Then
   sh.Run "cmd /c npm install", 1, True
 End If
 
+'' Si quedo una actualizacion pendiente, apagar el programa para terminarla
+If fso.FileExists(dir & "\.update-pending") And Encendido() Then
+  sh.Run "cmd /c for /f ""tokens=5"" %a in ('netstat -ano ^| findstr "":3000 "" ^| findstr LISTENING') do taskkill /f /t /pid %a", 0, True
+  WScript.Sleep 1500
+End If
+
 ' Encender el programa en segundo plano si no esta encendido
 If Not Encendido() Then
   ' Buscar actualizaciones en GitHub antes de encender

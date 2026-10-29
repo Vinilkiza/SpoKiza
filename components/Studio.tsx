@@ -80,10 +80,12 @@ export default function Studio() {
   useEffect(() => {
     fetch("/api/update", { method: "POST" })
       .then((r) => r.json())
-      .then((d: { updated?: boolean }) => {
+      .then((d: { updated?: boolean; pending?: boolean }) => {
         if (d.updated) {
           setNotice({ kind: "ok", text: "SpoKiza se actualizó. Recargando…" });
           setTimeout(() => window.location.reload(), 3000);
+        } else if (d.pending) {
+          setNotice({ kind: "error", text: "Hay una actualización lista: cierra SpoKiza y ábrelo otra vez desde el ícono." });
         }
       })
       .catch(() => null);

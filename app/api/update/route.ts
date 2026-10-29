@@ -15,7 +15,11 @@ export async function POST() {
   last = Date.now();
   const script = path.join(process.cwd(), "scripts", "update.mjs");
   const output = await new Promise<string>((resolve) =>
-    execFile(process.execPath, [script], { cwd: process.cwd(), timeout: 180_000 }, (_err, stdout) => resolve(String(stdout ?? ""))),
+    execFile(process.execPath, [script], { cwd: process.cwd(), timeout: 20 * 60_000 }, (_err, stdout) => resolve(String(stdout ?? ""))),
   );
-  return NextResponse.json({ updated: output.includes("SpoKiza actualizado."), message: output.trim().split("\n").pop() ?? "" });
+  return NextResponse.json({
+    updated: output.includes("SpoKiza actualizado."),
+    pending: output.includes("PENDIENTE"),
+    message: output.trim().split("\n").pop() ?? "",
+  });
 }
