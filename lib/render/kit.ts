@@ -294,6 +294,11 @@ export function infoBlock(
   return y;
 }
 
+/** Alto que ocupará infoBlock (sin dibujar). */
+export function infoBlockH(ctx: Ctx, items: string[], cap: number, pitch: number, maxW: number, family: string, weight: number): number {
+  return items.reduce((acc, it) => acc + fitWrap(ctx, it, cap, family, weight, maxW, 2).lines.length * cap * pitch, 0);
+}
+
 /* ---------------- piezas ---------------- */
 
 export function cover(k: Kit, x: number, y: number, w: number, h: number, radius = 0) {

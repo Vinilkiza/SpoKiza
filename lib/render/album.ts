@@ -8,7 +8,7 @@ import type { Ctx } from "./draw";
 import { mix } from "./color";
 import {
   type Frame, type Kit, type ListStyle, LINE_GAP, UP, bleedImage, capText, code, codeH, cover, drawFitted,
-  fitLines, fitWrap, infoBlock, madeBy, makeKit, movable, rule, swatches, tracklist, widthAtCap, drawBox,
+  fitLines, fitWrap, infoBlock, infoBlockH, madeBy, MIN_SMALL_MM, makeKit, movable, rule, swatches, tracklist, widthAtCap, drawBox,
 } from "./kit";
 
 const STYLE_TEXT: Record<AlbumStyle, { upper: boolean; num: ListStyle["num"]; bold: boolean }> = {
@@ -213,29 +213,52 @@ function franja(k: Kit, f: Frame, scale: number) {
     y += 2.2 * u + 4 * u;
   } else y += 1.5 * u;
 
-  const cap = 1.9 * u * (F.bodyScale > 1 ? 1.08 : 1);
-  const cw = c * 0.32;
-  const ch = codeH(k, cw);
+  const listCap = 1.9 * u * (F.bodyScale > 1 ? 1.08 : 1);
   const ly = y;
   movable(k, "tracks", () =>
     tracklist(k, { x: X, y: ly, w: c * 0.46, h: bottom - ly }, {
-      upper: true, num: "dot", maxCap: cap, pitch: 2.25, weight: F.bodyWeight,
+      upper: true, num: "dot", maxCap: listCap, pitch: 2.25, weight: F.bodyWeight,
       family: F.body, color: k.fg, numColor: k.fg, colGap: 4 * u,
     }),
   );
 
-  // Derecha
+  // Derecha. Norma: todo debe caber entre la lista y el borde inferior. Se mide antes de dibujar;
+  // si no cabe, primero se achica la letra y el código; si aun así no cabe, la portada cede espacio.
   const rw = c * 0.48;
-  const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, rw, 6 * u, 6 * u * 1.7, 2);
+  const room = bottom - ly;
+  const minCap = MIN_SMALL_MM * k.mm;
+  const infoItems = [k.info.release, k.info.length].filter(Boolean).map(UP);
+  const featText = k.info.feat ? UP(`${k.L.feat} ${k.info.feat}`) : "";
+  const measure = (sc: number) => {
+    const cap = Math.max(minCap, listCap * sc);
+    const cw = c * (0.32 * Math.max(0.7, sc));
+    const ch = codeH(k, cw);
+    const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, rw, 6 * u * sc, 6 * u * 1.7 * sc, 3);
+    let h = artist.height + 3.6 * u * sc + infoBlockH(ctx, infoItems, cap, 2.1, rw, F.body, F.bodyWeight);
+    if (k.info.label) h += cap * 1.6 + infoBlockH(ctx, [UP(k.L.releasedBy)], cap, 2.1, rw, F.body, F.bodyWeight)
+      + infoBlockH(ctx, [UP(k.info.label)], cap, 2.1, rw, F.body, F.bodyBold);
+    if (ch) h += cap * 1.2 + ch;
+    const fw = featText ? fitWrap(ctx, featText, cap * 0.92, F.body, F.bodyWeight, rw, 4) : null;
+    if (fw) h += cap + fw.lines.length * fw.cap * 2.05 - fw.cap * 1.05;
+    return { cap, cw, ch, artist, fw, h, sc };
+  };
+  let R2 = measure(1);
+  for (const sc of [0.92, 0.84, 0.76, 0.68, 0.6]) {
+    if (R2.h <= room) break;
+    R2 = measure(sc);
+  }
+  if (R2.h > room) k.tight = true;
+  const { cap, cw, ch, artist, fw, sc } = R2;
+
   movable(k, "artist", () =>
     artist.lines.forEach((l, i) => capText(ctx, l, R, ly + i * artist.cap * (1 + LINE_GAP), artist.cap, { ...tf, color: k.fg, align: "right" })),
   );
-  let ry = ly + artist.height + 3.6 * u;
+  let ry = ly + artist.height + 3.6 * u * sc;
   const body = { family: F.body, weight: F.bodyWeight, color: k.fg, align: "right" as const, maxW: rw };
   const iy = ry;
   const afterInfo = { y: ry };
   movable(k, "info", () => {
-    let yy2 = infoBlock(ctx, [k.info.release, k.info.length].filter(Boolean).map(UP), R, iy, cap, 2.1, rw, body);
+    let yy2 = infoBlock(ctx, infoItems, R, iy, cap, 2.1, rw, body);
     if (k.info.label) {
       yy2 += cap * 1.6;
       yy2 = infoBlock(ctx, [UP(k.L.releasedBy)], R, yy2, cap, 2.1, rw, { ...body, color: k.muted });
@@ -250,8 +273,7 @@ function franja(k: Kit, f: Frame, scale: number) {
     movable(k, "code", () => code(k, R - cw, cy, cw));
     ry += ch;
   }
-  if (k.info.feat) {
-    const fw = fitWrap(ctx, UP(`${k.L.feat} ${k.info.feat}`), cap * 0.92, F.body, F.bodyWeight, rw, 3);
+  if (fw) {
     const startY = Math.max(ry + cap, bottom - (fw.lines.length * fw.cap * 2.05 - fw.cap * 1.05));
     movable(k, "feat", () => fw.lines.forEach((l, i) => capText(ctx, l, R, startY + i * fw.cap * 2.05, fw.cap, { ...body, color: k.muted })));
   }
