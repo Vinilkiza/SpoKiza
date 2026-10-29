@@ -89,7 +89,7 @@ function posterSong(k: Kit, f: Frame) {
   }
   const p = parts(c);
   const X = f.x0 + (f.tw - c) / 2;
-  madeBy(k, X + c, m);
+  madeBy(k, X, m);
   cover(k, X, top, c, c);
 
   let y = top + c + 5 * p.u;
@@ -130,7 +130,7 @@ function polaroid(k: Kit, f: Frame) {
   const lower = 4.5 * u + rowH + (showPlayer ? 3.5 * u + pm.height : 0) + (ded ? 3.5 * u + ded.height : 0) + bottomPad;
   // Foto cuadrada si cabe; si no, se recorta en alto para que todo lo de abajo quepa
   const ph = Math.max(pw * 0.55, Math.min(pw, f.th - side - lower));
-  madeBy(k, X + pw, side);
+  madeBy(k, X, side);
   cover(k, X, f.y0 + side, pw, ph);
 
   let y = f.y0 + side + ph + 4.5 * u;
@@ -165,7 +165,7 @@ function plaque(k: Kit, f: Frame) {
   const pm = playerMetrics(k, u);
   const block = (ch ? ch + 4.5 * u : 0) + t.height + (showPlayer ? 4.5 * u + pm.height : 0);
   const ph = Math.max(c * 0.6, Math.min(c * 1.1, bottom - top - block - 6 * u));
-  madeBy(k, X + c, m);
+  madeBy(k, X, m);
   cover(k, X, top, c, ph, 2.2 * u);
 
   // Bloque inferior anclado abajo (el espacio que sobre queda entre la foto y el bloque)

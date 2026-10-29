@@ -377,19 +377,51 @@ export function rule(k: Kit, x: number, y: number, w: number, t: number, color =
   });
 }
 
-/** Firma "Made By Vinilkiza" (Montserrat Black), arriba a la derecha dentro del margen. */
-export function madeBy(k: Kit, right: number, marginTop: number, onImage = false, centerY?: number) {
+/** Firma discreta, alineada a la izquierda y dentro del margen superior. */
+export function madeBy(k: Kit, left: number, marginTop: number, onImage = false) {
   if (!k.o.settings.showMadeBy) return;
-  const cap = Math.max(MIN_SMALL_MM * 1.4 * k.mm, k.f.tw * 0.0072);
-  // Por defecto centrado en el margen de arriba; si se da centerY, alineado con esa línea (ej. el nombre del artista)
-  const y = centerY !== undefined ? centerY - cap / 2 : k.f.y0 + Math.max(cap * 0.6, (marginTop - cap) / 2);
+  const family = "'Montserrat'";
+  const text = "Made By Vinilkiza";
+  const inset = Math.min(3 * k.mm, k.f.tw * 0.03, k.f.th * 0.03);
+  const x = Math.max(k.f.x0 + inset, Math.min(left, k.f.x0 + k.f.tw - inset));
+  const maxW = Math.min(k.f.tw * 0.4, k.f.x0 + k.f.tw - inset - x);
+  const desiredCap = Math.max(MIN_SMALL_MM * k.mm, Math.min(k.f.tw, k.f.th) * 0.006);
+  // Medir también el alto (incluidos descendentes) antes de dibujar.
+  const topInset = Math.min(inset, marginTop * 0.15);
+  const availableH = Math.max(0, Math.min(marginTop, k.f.th) - topInset * 2);
+  const naturalW = widthAtCap(k.ctx, text, desiredCap, family, 900);
+  const cap = Math.min(desiredCap, desiredCap * maxW / Math.max(1, naturalW), availableH / 1.25);
+  if (cap < MIN_SMALL_MM * k.mm) k.tight = true;
+  if (cap <= 0 || maxW <= 0) return;
+  const y = k.f.y0 + Math.max(topInset, (Math.min(marginTop, k.f.th) - cap * 1.25) / 2);
+  const width = widthAtCap(k.ctx, text, cap, family, 900);
+
+  // En fotos a sangre, usar el fondo real bajo la firma, no el tema del pie.
+  let surface = k.bg;
+  if (onImage) {
+    try {
+      const rgb = [0, 0, 0];
+      for (let i = 0; i < 5; i++) {
+        const sx = Math.max(0, Math.min(k.o.W - 1, Math.floor(x + width * (i + 0.5) / 5)));
+        const sy = Math.max(0, Math.min(k.o.H - 1, Math.floor(y + cap * 0.6)));
+        const pixel = k.ctx.getImageData(sx, sy, 1, 1).data;
+        for (let c = 0; c < 3; c++) rgb[c] += pixel[c] / 5;
+      }
+      surface = "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+    } catch {
+      // Si el navegador no permite leer los píxeles, conservar el color del tema.
+    }
+  }
+  const darkInk = luminance(surface) > 0.18;
+  const color = mix(surface, darkInk ? "#000000" : "#ffffff", 0.72);
   movable(k, "madeby", () =>
-    capText(k.ctx, "Made By Vinilkiza", right, y, cap, {
-      family: "'Montserrat'",
+    capText(k.ctx, text, x, y, cap, {
+      family,
       weight: 900,
-      color: onImage ? "#ffffff" : k.fg,
-      align: "right",
-      shadow: onImage ? "rgba(0,0,0,0.45)" : undefined,
+      color,
+      align: "left",
+      maxW,
+      shadow: onImage ? (darkInk ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.25)") : undefined,
     }),
   );
 }
