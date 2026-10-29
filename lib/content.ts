@@ -30,11 +30,11 @@ export function makeContent(item: MusicItem): DesignContent {
   if (item.kind === "playlist") subtitle = [n ? `${n} canciones` : "", dur].filter(Boolean).join(" · ");
   const totalMs = item.kind === "track" ? item.durationMs ?? 210_000 : item.tracks?.[0]?.durationMs ?? 210_000;
   return {
-    title: item.kind === "album" ? cleanAlbum(item.title) : cleanTrack(item.title),
+    title: item.title,
     artists: item.artists,
     subtitle,
     dedication: "",
-    tracklist: (item.tracks ?? []).map((t) => cleanTrack(t.name)).join("\n"),
+    tracklist: (item.tracks ?? []).map((t) => t.name).join("\n"),
     elapsed: formatDuration(totalMs * 0.38),
     duration: formatDuration(totalMs),
     genre: (item.genres ?? []).map((g) => g.replace(/(^|\s|-)\p{L}/gu, (x) => x.toLocaleUpperCase("es"))).join(" / "),

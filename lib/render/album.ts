@@ -5,7 +5,7 @@ import type { AlbumStyle } from "../types";
 import type { RenderOpts } from "./templates";
 import { FONTS, type FontDef } from "./products";
 import { albumInfo, LABELS, type AlbumInfo } from "../content";
-import { type Ctx, drawCover, drawPlaceholder, ellipsize, setFont, wrapLines } from "./draw";
+import { type Ctx, drawCover, drawPlaceholder, setFont } from "./draw";
 import { hexToRgb, luminance, mix } from "./color";
 
 interface Frame {
@@ -71,13 +71,18 @@ interface TextStyle {
 /** Dibuja texto de modo que el tope de las mayúsculas quede en yTop. */
 function capText(ctx: Ctx, s: string, x: number, yTop: number, cap: number, st: TextStyle) {
   const weight = st.weight ?? 400;
+  // Norma: el texto nunca se corta; si no cabe en su espacio, se achica lo justo
+  if (st.maxW) {
+    const w = widthAtCap(ctx, s, cap, st.family, weight, st.spacing ?? 0);
+    if (w > st.maxW) cap = cap * (st.maxW / w);
+  }
   const size = cap / capRatio(ctx, st.family, weight);
   setFont(ctx, st.family, size, weight);
   setSpacing(ctx, (st.spacing ?? 0) * cap);
   ctx.fillStyle = st.color;
   ctx.textAlign = st.align ?? "left";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText(st.maxW ? ellipsize(ctx, s, st.maxW) : s, x, yTop + cap);
+  ctx.fillText(s, x, yTop + cap);
   setSpacing(ctx, 0);
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
@@ -98,35 +103,95 @@ interface Fitted {
 }
 const LINE_GAP = 0.3;
 
-/** Ajusta un título grande a un ancho, en 1 o 2 líneas, sin pasarse de altura. */
+/** Reparte palabras en n líneas lo más parejas posible (por ancho). */
+function balance(ctx: Ctx, words: string[], n: number, family: string, weight: number): string[] {
+  const total = widthAtCap(ctx, words.join(" "), 100, family, weight);
+  const target = total / n;
+  const lines: string[] = [];
+  let line = "";
+  for (let i = 0; i < words.length; i++) {
+    const test = line ? `${line} ${words[i]}` : words[i];
+    const remainingWords = words.length - i;
+    const remainingLines = n - lines.length;
+    if (line && widthAtCap(ctx, test, 100, family, weight) > target * 1.08 && remainingLines > 1 && remainingWords >= remainingLines - 1) {
+      lines.push(line);
+      line = words[i];
+    } else line = test;
+  }
+  lines.push(line);
+  return lines;
+}
+
+/**
+ * Norma para títulos y nombres grandes: se usa la letra más grande posible que quepa
+ * en el ancho y el alto disponibles, repartiendo en 1, 2 o 3 líneas. Nunca se corta.
+ */
 function fitLines(
   ctx: Ctx, text: string, family: string, weight: number,
   maxW: number, maxCap: number, maxBlock: number, maxLines = 2,
 ): Fitted {
-  const one = Math.min(maxCap, maxBlock, (maxCap * maxW) / Math.max(1, widthAtCap(ctx, text, maxCap, family, weight)));
-  let best: Fitted = { lines: [text], cap: one, height: one };
   const words = text.split(/\s+/).filter(Boolean);
-  if (maxLines >= 2 && words.length > 1) {
-    let split = 1;
-    let bestDiff = Infinity;
-    for (let i = 1; i < words.length; i++) {
-      const a = widthAtCap(ctx, words.slice(0, i).join(" "), 100, family, weight);
-      const b = widthAtCap(ctx, words.slice(i).join(" "), 100, family, weight);
-      if (Math.max(a, b) < bestDiff) {
-        bestDiff = Math.max(a, b);
-        split = i;
-      }
-    }
-    const lines = [words.slice(0, split).join(" "), words.slice(split).join(" ")];
-    const capW = (100 * maxW) / bestDiff;
-    const two = Math.min(maxCap, maxBlock / (2 + LINE_GAP), capW);
-    if (two > one * 1.3) best = { lines, cap: two, height: two * (2 + LINE_GAP) };
+  let best: Fitted | null = null;
+  for (let n = 1; n <= Math.min(maxLines, Math.max(1, words.length)); n++) {
+    const lines = n === 1 ? [words.join(" ")] : balance(ctx, words, n, family, weight);
+    const widest = Math.max(...lines.map((l) => widthAtCap(ctx, l, 100, family, weight)));
+    const real = lines.length;
+    const cap = Math.min(maxCap, maxBlock / (real + (real - 1) * LINE_GAP), (100 * maxW) / Math.max(1, widest));
+    // Se prefiere menos líneas salvo que más líneas den letra claramente más grande
+    if (!best || cap > best.cap * 1.25) best = { lines, cap, height: cap * (real + (real - 1) * LINE_GAP) };
   }
-  return best;
+  return best ?? { lines: [text], cap: maxCap, height: maxCap };
 }
 
 function drawFitted(ctx: Ctx, f: Fitted, x: number, yTop: number, st: TextStyle) {
   f.lines.forEach((l, i) => capText(ctx, l, x, yTop + i * f.cap * (1 + LINE_GAP), f.cap, st));
+}
+
+/** Parte un texto en líneas por palabras. Devuelve null si una palabra sola no cabe. */
+function wrapWords(ctx: Ctx, text: string, cap: number, family: string, weight: number, first: number, rest: number): string[] | null {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const limit = lines.length ? rest : first;
+    const test = line ? `${line} ${w}` : w;
+    if (widthAtCap(ctx, test, cap, family, weight) <= limit) {
+      line = test;
+      continue;
+    }
+    if (!line) return null;
+    lines.push(line);
+    line = w;
+    if (widthAtCap(ctx, w, cap, family, weight) > rest) return null;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** Texto pequeño en máximo `maxLines` líneas: si no cabe, la letra se achica un poco hasta que quepa. */
+function fitWrap(ctx: Ctx, text: string, cap: number, family: string, weight: number, maxW: number, maxLines: number) {
+  let c = cap;
+  for (let i = 0; i < 12; i++) {
+    const lines = wrapWords(ctx, text, c, family, weight, maxW, maxW);
+    if (lines && lines.length <= maxLines) return { lines, cap: c };
+    c *= 0.92;
+  }
+  return { lines: [text], cap: c };
+}
+
+/** Bloque de datos (fecha, sello…): cada dato puede ocupar hasta 2 líneas, nunca se corta. Devuelve la nueva y. */
+function infoBlock(
+  ctx: Ctx, items: string[], x: number, y: number, cap: number, pitch: number, maxW: number, st: TextStyle,
+): number {
+  const weight = st.weight ?? 400;
+  for (const item of items) {
+    const fw = fitWrap(ctx, item, cap, st.family, weight, maxW, 2);
+    fw.lines.forEach((l) => {
+      capText(ctx, l, x, y + (cap - fw.cap), fw.cap, { ...st, maxW });
+      y += cap * pitch;
+    });
+  }
+  return y;
 }
 
 /* ---------------- piezas ---------------- */
@@ -201,35 +266,109 @@ interface ListStyle {
   colGap: number;
 }
 
-/** Lista de canciones en columnas (se llena de arriba hacia abajo). */
+/**
+ * Lista de canciones en columnas. Normas:
+ *  - Todas las canciones van del mismo tamaño y nunca se cortan.
+ *  - Si un nombre no cabe, baja a una segunda línea (con sangría); máximo 2 líneas por canción.
+ *  - Se elige el número de columnas que deje la letra más grande, y las columnas quedan parejas.
+ */
 function tracklist(k: Kit, box: Box, st: ListStyle) {
   const n = k.tracks.length;
   if (!n || box.h <= 0 || box.w <= 0) return;
-  const minColW = st.maxCap * (/Bebas|Anton/.test(st.family) ? 8 : 11.5);
-  const maxCols = Math.max(1, Math.min(4, Math.floor((box.w + st.colGap) / (minColW + st.colGap))));
-  const capFor = (cols: number) => {
-    const rows = Math.ceil(n / cols);
-    return Math.min(st.maxCap, box.h / (rows * st.pitch - (st.pitch - 1)));
-  };
-  let cols = Math.min(maxCols, Math.max(1, Math.ceil(n / st.preferRows)));
-  while (cols < maxCols && capFor(cols) < st.maxCap * 0.62) cols++;
-  const rows = Math.ceil(n / cols);
-  const cap = capFor(cols);
-  const colW = (box.w - (cols - 1) * st.colGap) / cols;
-  const numW = st.num === "col" ? widthAtCap(k.ctx, `${n}.`, cap, st.family, st.weight) + cap * 2.6 : 0;
-  k.tracks.forEach((raw, i) => {
-    const col = Math.floor(i / rows);
-    const row = i % rows;
-    const x = box.x + col * (colW + st.colGap);
-    const y = box.y + row * cap * st.pitch;
-    const name = st.upper ? UP(raw) : raw;
-    if (st.num === "col") {
-      capText(k.ctx, `${i + 1}.`, x, y, cap, { family: st.family, weight: st.weight, color: st.numColor });
-      capText(k.ctx, name, x + numW, y, cap, { family: st.family, weight: st.weight, color: st.color, maxW: colW - numW });
-    } else {
-      const label = st.num === "dot" ? `${i + 1}. ${name}` : `${i + 1} ${name}`;
-      capText(k.ctx, label, x, y, cap, { family: st.family, weight: st.weight, color: st.color, maxW: colW });
+  const { ctx } = k;
+  const names = k.tracks.map((t) => (st.upper ? UP(t) : t));
+  const label = (i: number) => (st.num === "col" ? names[i] : st.num === "dot" ? `${i + 1}. ${names[i]}` : `${i + 1} ${names[i]}`);
+  const minCap = st.maxCap * 0.45;
+  const maxCols = Math.max(1, Math.min(4, Math.floor((box.w + st.colGap) / (st.maxCap * 7 + st.colGap))));
+
+  interface Placed { col: number; line: number; lines: string[] }
+  interface Plan { cap: number; cols: number; colW: number; numW: number; hang: number; items: Placed[]; total: number }
+
+  const wrapAll = (cols: number, cap: number) => {
+    const colW = (box.w - (cols - 1) * st.colGap) / cols;
+    const numW = st.num === "col" ? widthAtCap(ctx, `${n}.`, cap, st.family, st.weight) + cap * 1.8 : 0;
+    const hang = st.num === "col" ? numW : widthAtCap(ctx, st.num === "dot" ? `${n}. ` : `${n} `, cap, st.family, st.weight);
+    const wrapped: string[][] = [];
+    for (let i = 0; i < n; i++) {
+      const first = colW - numW;
+      const lines = wrapWords(ctx, label(i), cap, st.family, st.weight, first, colW - hang);
+      if (!lines || lines.length > 2) return null;
+      wrapped.push(lines);
     }
+    return { colW, numW, hang, wrapped };
+  };
+
+  const place = (cols: number, cap: number, limit: number): Plan | null => {
+    const w = wrapAll(cols, cap);
+    if (!w) return null;
+    const items: Placed[] = [];
+    let col = 0;
+    let line = 0;
+    for (const lines of w.wrapped) {
+      if (line + lines.length > limit) {
+        col++;
+        line = 0;
+      }
+      if (col >= cols) return null;
+      items.push({ col, line, lines });
+      line += lines.length;
+    }
+    const total = w.wrapped.reduce((acc, l) => acc + l.length, 0);
+    return { cap, cols, colW: w.colW, numW: w.numW, hang: w.hang, items, total };
+  };
+  const capacity = (cap: number) => Math.floor((box.h + (st.pitch - 1) * cap) / (st.pitch * cap));
+  const feasible = (cols: number, cap: number) => (capacity(cap) >= 1 ? place(cols, cap, capacity(cap)) : null);
+
+  let best: Plan | null = null;
+  for (let cols = 1; cols <= maxCols; cols++) {
+    let plan = feasible(cols, st.maxCap);
+    if (!plan) {
+      if (!feasible(cols, minCap)) continue;
+      let lo = minCap;
+      let hi = st.maxCap;
+      for (let it = 0; it < 14; it++) {
+        const mid = (lo + hi) / 2;
+        if (feasible(cols, mid)) lo = mid;
+        else hi = mid;
+      }
+      plan = feasible(cols, lo);
+    }
+    if (plan && (!best || plan.cap > best.cap * 1.03 || (plan.cap >= best.cap * 0.97 && plan.total < best.total))) best = plan;
+  }
+
+  if (!best) {
+    // Último recurso (listas enormes): letra mínima, un renglón por canción, ajustada al ancho
+    const cols = maxCols;
+    const cap = minCap;
+    const rows = Math.ceil(n / cols);
+    const colW = (box.w - (cols - 1) * st.colGap) / cols;
+    names.forEach((_, i) => {
+      const x = box.x + Math.floor(i / rows) * (colW + st.colGap);
+      const y = box.y + (i % rows) * cap * st.pitch;
+      capText(ctx, label(i), x, y, cap, { family: st.family, weight: st.weight, color: st.color, maxW: colW });
+    });
+    return;
+  }
+
+  // Columnas parejas: el menor alto de columna con el que todo sigue cabiendo
+  const target = Math.ceil(best.total / best.cols);
+  for (let limit = target; limit <= capacity(best.cap); limit++) {
+    const balanced = place(best.cols, best.cap, limit);
+    if (balanced) {
+      best = balanced;
+      break;
+    }
+  }
+
+  const { cap, colW, numW, hang } = best;
+  best.items.forEach((it, i) => {
+    const x = box.x + it.col * (colW + st.colGap);
+    it.lines.forEach((text, j) => {
+      const y = box.y + (it.line + j) * cap * st.pitch;
+      if (st.num === "col" && j === 0) capText(ctx, `${i + 1}.`, x, y, cap, { family: st.family, weight: st.weight, color: st.numColor });
+      const tx = j === 0 ? x + numW : x + hang;
+      capText(ctx, text, tx, y, cap, { family: st.family, weight: st.weight, color: st.color });
+    });
   });
 }
 
@@ -295,7 +434,7 @@ function titular(k: Kit, f: Frame) {
   const tf = { family: F.title, weight: F.titleWeight };
   const bw = F.bodyWeight;
 
-  const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, c, 7.4 * u, 7.4 * u, 1);
+  const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, c, 7.4 * u, 7.4 * u * 1.6, 2);
   drawFitted(ctx, artist, X, top, { ...tf, color: k.fg });
   let y = top + Math.max(artist.height, 5 * u) + 3.4 * u;
   cover(k, X, y, c, c);
@@ -318,16 +457,15 @@ function titular(k: Kit, f: Frame) {
     k.info.label && `${k.L.label}: ${k.info.label}`,
     k.info.length && `${k.L.length}: ${k.info.length}`,
   ].filter(Boolean) as string[];
-  // La ficha nunca invade la columna de canciones: se achica para caber en su columna
-  lines.forEach((l) => {
-    const text = UP(l);
-    const w = widthAtCap(ctx, text, cap, F.body, bw);
-    const fitCap = w > rightW ? Math.max(cap * 0.72, (cap * rightW) / w) : cap;
-    capText(ctx, text, R, ry + (cap - fitCap), fitCap, { family: F.body, weight: bw, color: k.fg, align: "right", maxW: rightW });
-    ry += cap * 2.05;
-  });
-  const titleRoom = bottom - ry - 3 * u;
-  const title = fitLines(ctx, UP(k.o.content.title || " "), tf.family, tf.weight, c * 0.44, 15 * u, Math.max(3 * u, titleRoom), 2);
+  // Norma: el título gigante tiene prioridad; la ficha se acomoda en el espacio que queda encima
+  const title = fitLines(ctx, UP(k.o.content.title || " "), tf.family, tf.weight, c * 0.44, 15 * u, 17 * u, 3);
+  const infoRoom = bottom - title.height - 3 * u - ry;
+  const items = lines.map(UP);
+  const blockH = (cc: number) =>
+    items.reduce((acc, it) => acc + fitWrap(ctx, it, cc, F.body, bw, rightW, 2).lines.length * cc * 2.05, 0);
+  let infoCap = cap;
+  while (infoCap > cap * 0.6 && blockH(infoCap) > infoRoom) infoCap *= 0.93;
+  ry = infoBlock(ctx, items, R, ry, infoCap, 2.05, rightW, { family: F.body, weight: bw, color: k.fg, align: "right" });
   title.lines.forEach((l, i) => {
     const yT = bottom - title.height + i * title.cap * (1 + LINE_GAP);
     capText(ctx, l, R, yT, title.cap, { ...tf, color: k.fg, align: "right" });
@@ -357,7 +495,7 @@ function minimal(k: Kit, f: Frame) {
   const gap = 0.8 * u;
   const n = k.o.settings.showPalette ? Math.min(5, k.palette.length) : 0;
   const palW = n ? n * sw + (n - 1) * gap : 0;
-  const title = fitLines(ctx, UP(k.o.content.title || " "), F.title, F.titleWeight, c - palW - 4 * u, 5.4 * u, 5.4 * u, 1);
+  const title = fitLines(ctx, UP(k.o.content.title || " "), F.title, F.titleWeight, c - palW - 4 * u, 5.4 * u, 5.4 * u * 2.3, 2);
   drawFitted(ctx, title, X, y, { family: F.title, weight: F.titleWeight, color: k.fg });
   swatches(k, 5, R, y + (title.cap - sw) / 2, sw, gap);
   y += title.height + 2.4 * u;
@@ -392,9 +530,9 @@ function minimal(k: Kit, f: Frame) {
   items.forEach(([label, value], i) => {
     const x = X + i * slotW;
     capText(ctx, UP(label), x, footerTop, lCap, { family: "'Inter'", weight: 500, color: k.muted, spacing: 0.12, maxW: slotW - 2 * u });
-    setFont(ctx, F.body, vCap / capRatio(ctx, F.body, F.bodyWeight), F.bodyWeight);
-    wrapLines(ctx, value, slotW - 2.5 * u, 2).forEach((line, j) =>
-      capText(ctx, line, x, footerTop + lCap + 1.8 * u + j * vCap * 1.6, vCap, { family: F.body, weight: F.bodyWeight, color: k.fg }),
+    const fw = fitWrap(ctx, value, vCap, F.body, F.bodyWeight, slotW - 2.5 * u, 2);
+    fw.lines.forEach((line, j) =>
+      capText(ctx, line, x, footerTop + lCap + 1.8 * u + j * vCap * 1.6, fw.cap, { family: F.body, weight: F.bodyWeight, color: k.fg, maxW: slotW - 2.5 * u }),
     );
   });
   if (ch) code(k, R - cw, bottom - ch, cw);
@@ -404,7 +542,7 @@ function minimal(k: Kit, f: Frame) {
 
 function franja(k: Kit, f: Frame) {
   const { ctx, F } = k;
-  const { c, u, X, top, bottom } = column(f, 1.55);
+  const { c, u, X, top, bottom } = column(f, 1.68);
   const R = X + c;
   const tf = { family: F.title, weight: F.titleWeight };
   rule(k, X, top, c, 0.45 * u);
@@ -436,34 +574,32 @@ function franja(k: Kit, f: Frame) {
   const cap = 1.9 * u * (F.bodyScale > 1 ? 1.08 : 1);
   const cw = c * 0.32;
   const ch = codeH(k, cw);
-  if (ch) code(k, X - cw * 0.02, bottom - ch, cw);
-  tracklist(k, { x: X, y, w: c * 0.44, h: bottom - y - (ch ? ch + 3 * u : 0) }, {
+  tracklist(k, { x: X, y, w: c * 0.46, h: bottom - y }, {
     upper: true, num: "dot", preferRows: 9, maxCap: cap, pitch: 2.25, weight: F.bodyWeight,
     family: F.body, color: k.fg, numColor: k.fg, colGap: 4 * u,
   });
 
   // Derecha
-  const rw = c * 0.52;
+  const rw = c * 0.48;
   const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, rw, 6 * u, 6 * u * 1.7, 2);
   artist.lines.forEach((l, i) => capText(ctx, l, R, y + i * artist.cap * (1 + LINE_GAP), artist.cap, { ...tf, color: k.fg, align: "right" }));
   let ry = y + artist.height + 3.6 * u;
   const body = { family: F.body, weight: F.bodyWeight, color: k.fg, align: "right" as const, maxW: rw };
-  for (const v of [k.info.release, k.info.length]) {
-    if (!v) continue;
-    capText(ctx, UP(v), R, ry, cap, body);
-    ry += cap * 2.1;
-  }
+  ry = infoBlock(ctx, [k.info.release, k.info.length].filter(Boolean).map(UP), R, ry, cap, 2.1, rw, body);
   if (k.info.label) {
     ry += cap * 1.6;
-    capText(ctx, UP(k.L.releasedBy), R, ry, cap, { ...body, color: k.muted });
-    ry += cap * 2.1;
-    capText(ctx, UP(k.info.label), R, ry, cap, { ...body, weight: F.bodyBold });
-    ry += cap * 2.1;
+    ry = infoBlock(ctx, [UP(k.L.releasedBy)], R, ry, cap, 2.1, rw, { ...body, color: k.muted });
+    ry = infoBlock(ctx, [UP(k.info.label)], R, ry, cap, 2.1, rw, { ...body, weight: F.bodyBold });
+  }
+  if (ch) {
+    ry += cap * 1.2;
+    code(k, R - cw, ry, cw);
+    ry += ch;
   }
   if (k.info.feat) {
-    const fCap = cap * 0.92;
-    setFont(ctx, F.body, fCap / capRatio(ctx, F.body, F.bodyWeight), F.bodyWeight);
-    const lines = wrapLines(ctx, UP(`${k.L.feat} ${k.info.feat}`), rw, 3);
+    const fw = fitWrap(ctx, UP(`${k.L.feat} ${k.info.feat}`), cap * 0.92, F.body, F.bodyWeight, rw, 3);
+    const fCap = fw.cap;
+    const lines = fw.lines;
     const startY = Math.max(ry + cap, bottom - (lines.length * fCap * 2.05 - fCap * 1.05));
     lines.forEach((l, i) => capText(ctx, l, R, startY + i * fCap * 2.05, fCap, { ...body, color: k.muted }));
   }
@@ -512,7 +648,7 @@ function noche(k: Kit, f: Frame, o: RenderOpts) {
   if (k.info.release) {
     const rCap = 1.45 * u;
     const yRel = bottom - (ch ? ch + 3.5 * u : 0) - rCap * 3.2;
-    const st = { family: F.body, weight: bold, color: k.fg, align: "right" as const };
+    const st = { family: F.body, weight: bold, color: k.fg, align: "right" as const, maxW: rw };
     capText(ctx, UP(k.L.releasedOn), R, yRel, rCap, st);
     capText(ctx, UP(k.info.release), R, yRel + rCap * 2.2, rCap, st);
   }
@@ -561,8 +697,7 @@ function degradado(k: Kit, f: Frame, o: RenderOpts) {
   for (const [label, value] of [[k.L.release, k.info.release], [k.L.length, k.info.length]] as const) {
     if (!value) continue;
     capText(ctx, label, R, ry, lCap, { ...st, weight: F.bodyBold });
-    capText(ctx, value, R, ry + lCap * 2.1, vCap, { ...st, weight: 400 });
-    ry += lCap * 2.1 + vCap * 3.4;
+    ry = infoBlock(ctx, [value], R, ry + lCap * 2.1, vCap, 2.1, c * 0.36, { ...st, weight: 400 }) + vCap * 1.3;
   }
   const cw = Math.min(c * 0.34, 30 * u);
   const ch = codeH(k, cw);
