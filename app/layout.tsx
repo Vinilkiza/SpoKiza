@@ -13,7 +13,7 @@ import "@fontsource/space-mono/700.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Vinilkiza Música",
+  title: "SpoKiza",
   description: "Editor de posters, polaroids y placas a partir de canciones, álbumes y playlists",
 };
 

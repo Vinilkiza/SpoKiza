@@ -1,4 +1,4 @@
-# Vinilkiza Música
+# SpoKiza
 
 Editor para crear **posters de álbum, posters de canción, polaroids y placas tipo Spotify** a partir de links de Spotify, en lote, listos para imprimir.
 
@@ -17,7 +17,7 @@ Spotify exige que la cuenta dueña de la app tenga **Spotify Premium** activo; s
 
 1. Entra a https://developer.spotify.com/dashboard con la cuenta Premium de Vinilkiza y acepta los términos.
 2. Clic en **Create app**.
-   - App name: `Vinilkiza Música`
+   - App name: `SpoKiza`
    - App description: `Editor interno de diseños`
    - Redirect URI: `http://127.0.0.1:3000/callback` (el formulario lo pide; el programa no lo usa)
    - En "Which API/SDKs are you planning to use?" marca **Web API**.
@@ -34,12 +34,12 @@ El Client Secret es privado: no lo compartas ni lo subas a GitHub (`.env.local` 
 
 ## Publicarlo en Vercel (sin instalar nada)
 
-1. En https://vercel.com entra con GitHub y dale **Add New → Project**, elige el repositorio `vinilkiza-musica` y **Import**.
+1. En https://vercel.com entra con GitHub y dale **Add New → Project**, elige el repositorio `SpoKiza` y **Import**.
 2. Antes de darle Deploy abre **Environment Variables** y agrega tres:
    - `SPOTIFY_CLIENT_ID` → el Client ID de Spotify
    - `SPOTIFY_CLIENT_SECRET` → el Client Secret
    - `ACCESS_PASSWORD` → una clave para entrar al programa (así nadie más usa el link)
-3. **Deploy**. Vercel da un link tipo `vinilkiza-musica.vercel.app`; al abrirlo pide usuario (cualquiera) y la clave.
+3. **Deploy**. Vercel da un link tipo `spokiza.vercel.app`; al abrirlo pide usuario (cualquiera) y la clave.
 
 ## 3. Abrir el programa en un PC (opcional)
 

@@ -51,8 +51,8 @@ function slugText(page: PDFPage, font: PDFFont, text: string) {
 /** Un PDF con una página por diseño. */
 export async function buildPdf(pieces: PdfPiece[]): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  doc.setProducer("Vinilkiza Música");
-  doc.setCreator("Vinilkiza Música");
+  doc.setProducer("SpoKiza");
+  doc.setCreator("SpoKiza");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   for (const p of pieces) {
     const img = await doc.embedJpg(p.jpeg);
@@ -116,7 +116,7 @@ export async function buildSheetPdf(pieces: PdfPiece[], sheet: SheetSpec, copies
   for (const p of pieces) for (let i = 0; i < copies; i++) list.push(p);
 
   const doc = await PDFDocument.create();
-  doc.setProducer("Vinilkiza Música");
+  doc.setProducer("SpoKiza");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const embedded = new Map<PdfPiece, Awaited<ReturnType<typeof doc.embedJpg>>>();
   for (const p of pieces) embedded.set(p, await doc.embedJpg(p.jpeg));

@@ -395,7 +395,7 @@ export default function Studio() {
       {/* ===== Izquierda: agregar y lote ===== */}
       <aside className="flex min-h-0 flex-col border-r border-line bg-card">
         <div className="border-b border-line px-4 py-3">
-          <h1 className="text-base font-extrabold tracking-tight">Vinilkiza Música</h1>
+          <h1 className="text-base font-extrabold tracking-tight">SpoKiza</h1>
           <p className="text-xs text-soft">Posters, polaroids y placas desde Spotify</p>
         </div>
         <div className="space-y-4 overflow-y-auto p-4">

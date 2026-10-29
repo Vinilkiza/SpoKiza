@@ -18,7 +18,7 @@ export function proxy(request: NextRequest) {
   }
   return new NextResponse("Acceso restringido", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Vinilkiza Musica", charset="UTF-8"' },
+    headers: { "WWW-Authenticate": 'Basic realm="SpoKiza", charset="UTF-8"' },
   });
 }
 

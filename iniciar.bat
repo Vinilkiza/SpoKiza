@@ -1,5 +1,5 @@
 @echo off
-title Vinilkiza Musica
+title SpoKiza
 cd /d "%~dp0"
 if not exist node_modules (
   echo Instalando por primera vez, espera un momento...
