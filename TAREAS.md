@@ -2,7 +2,8 @@
 
 Formato: `- [ ] título` + detalle. Codex hace la primera pendiente, la marca `[x]` y abre un Pull Request.
 
-- [ ] 1. Campo "Código del cliente" en SpoKiza
+- [x] 1. Campo "Código del cliente" en SpoKiza
+  Implementado en borrador: `components/Studio.tsx`, `lib/codigo.ts` y `TAREAS.md`. Pendiente validar TypeScript y build: dependencias no disponibles en el entorno sin acceso de red.
 
   Objetivo: el cliente escoge del catálogo un número (1 a 8) y a veces un color. David lo escribe y SpoKiza ajusta todo solo.
 

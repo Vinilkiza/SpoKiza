@@ -14,6 +14,7 @@ import type { EditBox } from "@/lib/render/kit";
 import { EDIT_LABELS } from "@/lib/render/kit";
 import EditLayer, { type CssBox } from "./EditLayer";
 import { formatDuration } from "@/lib/parse";
+import { parseCodigo } from "@/lib/codigo";
 
 /** Límite de píxeles por archivo para que el navegador no se quede sin memoria. */
 const MAX_PIXELS = 160_000_000;
@@ -24,6 +25,8 @@ const KIND_LABEL: Record<SearchType, string> = { track: "Canción", album: "Álb
 
 export default function Studio() {
   const [settings, setSettings] = useState<DesignSettings>(DEFAULT_SETTINGS);
+  const [codigoCliente, setCodigoCliente] = useState("");
+  const [codigoNotice, setCodigoNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [batch, setBatch] = useState<BatchEntry[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [linksText, setLinksText] = useState("");
@@ -214,6 +217,35 @@ export default function Studio() {
   const patchSettings = (patch: Partial<DesignSettings>) => setSettings((s) => ({ ...s, ...patch }));
 
   const isPoster = (id: ProductId) => id === "poster-album" || id === "poster-cancion";
+
+  const applyCodigo = () => {
+    const patch = parseCodigo(codigoCliente);
+    if (!patch?.product) {
+      setCodigoNotice({ kind: "error", text: "No entendí el código (ej: 3 negro)" });
+      return;
+    }
+    const id = patch.product;
+    const p = productById(id);
+    const style = ALBUM_STYLES.find((a) => a.id === patch.albumStyle);
+    setSettings((s) => ({
+      ...s,
+      ...(id !== s.product ? {
+        bleedMm: p.bleedMm,
+        showCode: true,
+        showPalette: false,
+        showPlayer: false,
+        ...p.defaults,
+        font: s.font === "condensada" ? "moderna" : s.font,
+      } : {}),
+      ...(style ? { font: style.font } : {}),
+      ...patch,
+      widthCm: isPoster(id) ? (isPoster(s.product) ? s.widthCm : 30) : patch.widthCm!,
+      heightCm: isPoster(id) ? (isPoster(s.product) ? s.heightCm : 45) : patch.heightCm!,
+    }));
+    const nombre = style?.label ?? (id === "poster-cancion" ? "Canción" : id === "polaroid" ? "Polaroid" : "Placa");
+    const color = patch.theme === "oscuro" ? "Negro" : patch.theme === "portada" ? "Color de la foto" : "Claro";
+    setCodigoNotice({ kind: "ok", text: `Listo: ${codigoCliente.trim()[0]} ${nombre} · ${color}` });
+  };
 
   const chooseProduct = (id: ProductId) => {
     const p = productById(id);
@@ -742,6 +774,31 @@ export default function Studio() {
       {/* ===== Derecha: ajustes, contenido y exportación ===== */}
       <aside className="min-h-0 space-y-5 overflow-y-auto border-l border-line bg-card p-4">
         <section>
+          <label className="label" htmlFor="codigo-cliente">Código del cliente</label>
+          <input
+            id="codigo-cliente"
+            className="field"
+            type="text"
+            placeholder="Ej: 3 negro"
+            value={codigoCliente}
+            aria-invalid={codigoNotice?.kind === "error"}
+            aria-describedby={codigoNotice ? "codigo-cliente-estado" : undefined}
+            onChange={(e) => { setCodigoCliente(e.target.value); setCodigoNotice(null); }}
+            onBlur={applyCodigo}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                applyCodigo();
+              }
+            }}
+          />
+          {codigoNotice && (
+            <p id="codigo-cliente-estado" role="status" className={`mt-1 text-xs ${codigoNotice.kind === "error" ? "text-red-700" : "text-green-700"}`}>
+              {codigoNotice.text}
+            </p>
+          )}
+        </section>
+        <section>
           <span className="label">Producto</span>
           <div className="grid grid-cols-2 gap-1.5">
             {PRODUCTS.map((p) => (
@@ -1087,3 +1144,4 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 
 const fmt = (n: number) => (Math.round(n * 100) / 100).toString().replace(".", ",");
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
