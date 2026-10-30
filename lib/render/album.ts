@@ -56,11 +56,13 @@ function titular(k: Kit, f: Frame, scale: number) {
   const bw = F.bodyWeight;
   const R = X + c;
 
-  const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, c * 0.62, 7.4 * u, 7.4 * u * 1.6, 2);
+  // Zona fija para el artista: si el nombre es largo se achica la letra, la portada no se mueve
+  const artistZone = 7.8 * u;
+  const artist = fitLines(ctx, UP(k.o.content.artists || " "), tf.family, tf.weight, c * 0.62, 7.4 * u, artistZone, 2);
   // La firma ocupa el margen superior, sin competir con el nombre del artista.
   madeBy(k, X, m);
   movable(k, "artist", () => drawFitted(ctx, artist, X, top, { ...tf, color: k.fg }));
-  let y = top + Math.max(artist.height, 5 * u) + 3.4 * u;
+  let y = top + artistZone + 3.4 * u;
   cover(k, X + (c - cs) / 2, y, cs, cs);
   y += cs + 3.4 * u;
 
@@ -131,13 +133,13 @@ function minimal(k: Kit, f: Frame, scale: number) {
   movable(k, "title", () => drawFitted(ctx, title, X, ty, { family: F.title, weight: F.titleWeight, color: k.fg }));
   movable(k, "palette", () => swatches(k, 5, R, ty + (title.cap - sw) / 2, sw, gap));
   y += title.height + 2.4 * u;
-  const aCap = 3 * u;
+  const aCap = 2.6 * u;
   const artist = fitLines(ctx, k.o.content.artists || " ", F.body, F.bodyWeight, c - palW - 4 * u, aCap, aCap * 2.4, 2);
   const ay = y;
   movable(k, "artist", () => drawFitted(ctx, artist, X, ay, { family: F.body, weight: F.bodyWeight, color: k.fg }));
-  y += artist.height + 4.2 * u;
+  y += artist.height + 3.4 * u;
   rule(k, X, y, c, 0.13 * u, k.muted);
-  y += 4.2 * u;
+  y += 3.4 * u;
 
   // Ficha inferior
   const lCap = Math.max(0.95 * u, k.mm * 1.05);
@@ -156,7 +158,7 @@ function minimal(k: Kit, f: Frame, scale: number) {
   const ly = y;
   movable(k, "tracks", () =>
     tracklist(k, { x: X, y: ly, w: c, h: ruleY - 4 * u - ly }, {
-      upper: true, num: "col", maxCap: 1.6 * u, pitch: 2.3,
+      upper: true, num: "col", maxCap: 1.6 * u, pitch: 2.1,
       weight: F.bodyWeight, family: F.body, color: k.fg, numColor: k.muted, colGap: 6 * u,
     }),
   );
@@ -195,9 +197,11 @@ function franja(k: Kit, f: Frame, scale: number) {
     yearW = widthAtCap(ctx, k.info.year, yearCap, tf.family, tf.weight);
     movable(k, "year", () => capText(ctx, k.info.year, R, yy, yearCap, { ...tf, color: k.fg, align: "right" }));
   }
-  const title = fitLines(ctx, UP(k.o.content.title || " "), tf.family, tf.weight, c - yearW - 5 * u, 8.6 * u, 8.6 * u * 1.6, 2);
+  // Zona fija para el título: si es largo se achica la letra, la portada no se mueve
+  const titleZone = 9 * u;
+  const title = fitLines(ctx, UP(k.o.content.title || " "), tf.family, tf.weight, c - yearW - 5 * u, 8.6 * u, titleZone, 2);
   movable(k, "title", () => drawFitted(ctx, title, X, yy, { ...tf, color: k.fg }));
-  y += Math.max(title.height, yearCap) + 3.4 * u;
+  y += titleZone + 3.4 * u;
 
   cover(k, X + (c - cs) / 2, y, cs, cs);
   y += cs + 3 * u;
