@@ -13,8 +13,8 @@ const CODIGOS: Record<string, Partial<DesignSettings>> = {
 
 const COLORES: Record<string, ThemeId> = {
   claro: "claro", blanco: "claro", a: "claro",
-  negro: "oscuro", oscuro: "oscuro", b: "oscuro",
-  color: "portada", foto: "portada", "color de la foto": "portada", c: "portada",
+  negro: "oscuro", oscuro: "oscuro", noche: "oscuro", b: "oscuro",
+  color: "portada", foto: "portada", "color de la foto": "portada", "color del album": "portada", album: "portada", c: "portada",
 };
 
 /** Interpreta el catálogo; las medidas de póster dependen del producto actual en Studio. */

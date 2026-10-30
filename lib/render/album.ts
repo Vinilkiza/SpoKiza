@@ -21,8 +21,8 @@ const STYLE_TEXT: Record<AlbumStyle, { upper: boolean; num: ListStyle["num"]; bo
 
 export function renderAlbum(ctx: Ctx, f: Frame, o: RenderOpts) {
   const style = o.settings.albumStyle;
-  // Se prueba con la portada completa; si la lista queda muy pequeña, la portada se achica un poco y se repite.
-  for (const scale of [1, 0.94, 0.88, 0.82, 0.76, 0.7]) {
+  // Norma: la portada SIEMPRE tiene el mismo tamaño (no depende del álbum); son los textos los que se acomodan.
+  for (const scale of [1]) {
     ctx.fillStyle = o.assets.colors.bg;
     ctx.fillRect(0, 0, o.W, o.H);
     if (o.boxes) o.boxes.length = 0;
@@ -249,7 +249,7 @@ function franja(k: Kit, f: Frame, scale: number) {
     return { cap, cw, ch, artist, fw, h, sc };
   };
   let R2 = measure(1);
-  for (const sc of [0.92, 0.84, 0.76, 0.68, 0.6]) {
+  for (const sc of [0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.45]) {
     if (R2.h <= room) break;
     R2 = measure(sc);
   }

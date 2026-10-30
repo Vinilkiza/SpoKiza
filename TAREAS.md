@@ -36,7 +36,7 @@ Formato: `- [ ] título` + detalle. Codex hace la primera pendiente, la marca `[
   Pruebas: agregar `lib/codigo.test.ts` NO es necesario; basta con que `npx tsc --noEmit -p .` y `npx next build` pasen.
 
 
-- [ ] Firma superior izquierda (solicitud directa del usuario)
+- [x] Firma superior izquierda (solicitud directa del usuario)
 
   Implementado en borrador: “Made By Vinilkiza” en Montserrat Black 900, discreta y con color adaptado al fondo, para álbumes y demás imágenes. Archivos: `lib/render/kit.ts`, `lib/render/album.ts`, `lib/render/song.ts` y `TAREAS.md`.
   Pendiente: comprobación visual, `npx tsc --noEmit -p .` y `npx next build`; las dependencias no están disponibles en el entorno sin red.
